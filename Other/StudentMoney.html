@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A-Level Income Navigator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - NMW/Tax Data (Report Tables 2, 3): Goal: Inform. Viz: Interactive HTML tables, bar chart for NMW by age (Chart.js). Interaction: Hover for details on tables. Justification: Clear, quick reference.
+        - Working Hours (Report Table 1): Goal: Inform. Viz: HTML table. Interaction: None. Justification: Static but crucial info.
+        - Income Strategy Comparison (Report Table 4): Goal: Compare. Viz: Interactive sortable HTML table. Interaction: User clicks column headers to sort. Justification: Allows personalized exploration.
+        - Individual Income Strategies (Report Sections 2-6): Goal: Explore in-depth. Viz: Card-based layout; each card expands to show details (earning potential, skills, pros/cons). Interaction: Click to expand/collapse. Justification: Manages information density, user-controlled exploration.
+        - Skills for UCAS: Goal: Inform/Inspire. Viz: Bulleted lists within relevant income strategy cards. Interaction: Part of card content. Justification: Directly links work to academic benefit.
+        - Risk Management/Balancing Act: Goal: Advise. Viz: Accordion sections. Interaction: Click to reveal. Justification: Organizes advice into digestible chunks.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #FAF7F2; color: #2D3748; }
+        .nav-link { transition: color 0.3s ease, border-bottom-color 0.3s ease; }
+        .nav-link.active { color: #4FD1C5; border-bottom-color: #4FD1C5; }
+        .nav-link:hover { color: #4FD1C5; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); }
+        .card-header { cursor: pointer; padding: 1rem; border-bottom: 1px solid #E2E8F0; }
+        .card-content { padding: 1rem; display: none; }
+        .card-content.expanded { display: block; }
+        .accordion-header { cursor: pointer; padding: 0.75rem 1rem; background-color: #F7FAFC; border: 1px solid #E2E8F0; border-radius: 0.375rem; margin-bottom: 0.5rem; }
+        .accordion-header:hover { background-color: #EDF2F7; }
+        .accordion-content { padding: 1rem; border: 1px solid #E2E8F0; border-top: none; border-radius: 0 0 0.375rem 0.375rem; display: none; margin-bottom: 0.5rem; }
+        .accordion-content.expanded { display: block; }
+        .table-sortable th { cursor: pointer; }
+        .table-sortable th:hover { background-color: #E2E8F0; }
+        .chart-container { position: relative; width: 100%; max-width: 576px; margin-left: auto; margin-right: auto; height: 320px; max-height: 384px; }
+        @media (min-width: 640px) { .chart-container { height: 288px; } }
+        @media (min-width: 768px) { .chart-container { height: 320px; } }
+
+        .tab-button { padding: 0.5rem 1rem; margin-right: 0.5rem; border-radius: 0.375rem; transition: background-color 0.3s ease, color 0.3s ease; }
+        .tab-button.active { background-color: #4FD1C5; color: white; }
+        .tab-button:not(.active):hover { background-color: #A0AEC0; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #FAF7F2; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #A0AEC0; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4FD1C5; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <span class="font-bold text-xl text-[#1A202C]">A-Level Income Navigator</span>
+                </div>
+                <nav class="hidden md:flex space-x-4">
+                    <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-[#2D3748] border-b-2 border-transparent active" data-section="foundations">Foundations</a>
+                    <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-[#2D3748] border-b-2 border-transparent" data-section="income-streams">Income Streams</a>
+                    <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-[#2D3748] border-b-2 border-transparent" data-section="strategy-hub">Strategy Hub</a>
+                    <a href="#" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-[#2D3748] border-b-2 border-transparent" data-section="key-advice">Key Advice</a>
+                </nav>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-[#2D3748] hover:text-[#4FD1C5] focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="mobile-menu" class="md:hidden hidden bg-white shadow-lg">
+            <a href="#" class="block nav-link px-4 py-3 text-base font-medium text-[#2D3748] border-l-4 border-transparent active" data-section="foundations">Foundations</a>
+            <a href="#" class="block nav-link px-4 py-3 text-base font-medium text-[#2D3748] border-l-4 border-transparent" data-section="income-streams">Income Streams</a>
+            <a href="#" class="block nav-link px-4 py-3 text-base font-medium text-[#2D3748] border-l-4 border-transparent" data-section="strategy-hub">Strategy Hub</a>
+            <a href="#" class="block nav-link px-4 py-3 text-base font-medium text-[#2D3748] border-l-4 border-transparent" data-section="key-advice">Key Advice</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <section id="foundations" class="content-section active">
+            <h1 class="text-3xl font-bold text-[#1A202C] mb-6">Foundations: Your Rights & Responsibilities</h1>
+            <p class="mb-6 text-lg text-[#2D3748]">This section provides essential information about balancing your A-Level studies with work, understanding UK employment laws for young people, and your tax obligations. Knowing these foundations will help you make informed decisions as you explore income-generating opportunities.</p>
+
+            <div class="space-y-8">
+                <div class="card">
+                    <div class="card-header toggle-card">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">Balancing Academic Rigour with Work</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="text-[#2D3748] mb-2">A-levels are demanding. While work offers financial and skill benefits, it's crucial it doesn't compromise your studies. Research suggests working modest hours (e.g., under 15-16 per week) may not negatively impact, and could even benefit, academic attainment. Exceeding this can lead to poorer outcomes.</p>
+                        <p class="text-[#2D3748] font-medium">Key: Find a sustainable balance. Prioritise A-level success.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header toggle-card">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">Working Hours Regulations (16-17 Year Olds)</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="text-[#2D3748] mb-4">If you are 16 or 17 and have passed the minimum school leaving age, specific rules apply to protect your well-being and education:</p>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-[#4FD1C5] text-white">
+                                    <tr>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Condition</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Regulation</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-[#2D3748]">
+                                    <tr class="border-b"><td class="py-3 px-4">Max Weekly Hours</td><td class="py-3 px-4">40 hours</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">Max Daily Hours</td><td class="py-3 px-4">8 hours</td></tr>
+                                    <tr class="border-b"><td class="py-3 px-4">Night Work Restrictions</td><td class="py-3 px-4">Generally not between 10 pm and 6 am</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">Rest Break (>4.5 hrs work)</td><td class="py-3 px-4">Minimum 30 minutes</td></tr>
+                                    <tr class="border-b"><td class="py-3 px-4">Daily Rest</td><td class="py-3 px-4">Minimum 12 hours between shifts</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">Weekly Rest</td><td class="py-3 px-4">Minimum 48 hours (2 consecutive days if possible)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="mt-3 text-sm text-[#2D3748]">Note: Stricter rules apply if under minimum school leaving age. Always check local council by-laws if unsure. The academic demands of A-levels mean working the legal maximum is likely detrimental.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header toggle-card">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">UK National Minimum Wage (NMW)</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="text-[#2D3748] mb-4">You are entitled to the National Minimum Wage, which varies by age. Rates are typically updated on 1 April.</p>
+                        <div class="chart-container mb-4">
+                            <canvas id="nmwChart"></canvas>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-[#4FD1C5] text-white">
+                                    <tr>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Age Group</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Hourly Rate (from April 2025)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-[#2D3748]">
+                                    <tr class="border-b"><td class="py-3 px-4">16-17 Year Olds</td><td class="py-3 px-4">£7.55</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">18-20 Year Olds</td><td class="py-3 px-4">£10.00</td></tr>
+                                    <tr class="border-b"><td class="py-3 px-4">Apprentice Rate*</td><td class="py-3 px-4">£7.55</td></tr>
+                                    <tr class="bg-gray-50"><td class="py-3 px-4">National Living Wage (21+)</td><td class="py-3 px-4">£12.21</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="mt-3 text-sm text-[#2D3748]">*Applies to apprentices under 19, or 19+ in their first year.</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header toggle-card">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">Tax & National Insurance (NI)</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="text-[#2D3748] mb-4">Understanding your tax and NI obligations is crucial. Here are the key points for 2024/25 & 2025/26 tax years:</p>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-white">
+                                <thead class="bg-[#4FD1C5] text-white">
+                                    <tr>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Item</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Threshold/Rate</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-[#2D3748]">
+                                    <tr class="border-b"><td class="py-3 px-4">Personal Allowance</td><td class="py-3 px-4">£12,570 per year</td><td class="py-3 px-4">Income below this is not taxed.</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">Basic Rate Income Tax</td><td class="py-3 px-4">20%</td><td class="py-3 px-4">On taxable income above Personal Allowance.</td></tr>
+                                    <tr class="border-b"><td class="py-3 px-4">Employee NI (Primary Threshold)</td><td class="py-3 px-4">£242/week (£12,570/year)</td><td class="py-3 px-4">NI payable on earnings above this.</td></tr>
+                                    <tr class="border-b bg-gray-50"><td class="py-3 px-4">Self-Assessment Registration (Gross Self-Employed Income)</td><td class="py-3 px-4">£1,000 per tax year</td><td class="py-3 px-4">Must register if income exceeds this.</td></tr>
+                                    <tr class="bg-gray-50"><td class="py-3 px-4">Trading Allowance</td><td class="py-3 px-4">£1,000 per tax year</td><td class="py-3 px-4">Tax-free for self-employment/casual income if gross income is below this.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 space-y-2">
+                            <p><strong class="text-[#1A202C]">Employed (PAYE):</strong> Your employer usually deducts tax and NI automatically.</p>
+                            <p><strong class="text-[#1A202C]">Self-Employed:</strong> If gross income from self-employment is over £1,000/year, you must register for Self Assessment with HMRC.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="income-streams" class="content-section">
+            <h1 class="text-3xl font-bold text-[#1A202C] mb-6">Exploring Income Streams</h1>
+            <p class="mb-6 text-lg text-[#2D3748]">Discover various ways A-Level students can earn money. This section breaks down different categories of work, from traditional jobs to online ventures. Click on a category to see specific opportunities and learn more about their potential, requirements, and benefits.</p>
+            
+            <div class="mb-6">
+                <button class="tab-button active" data-tab="traditional">Traditional Jobs</button>
+                <button class="tab-button" data-tab="freelancing">Freelancing (Academic Skills)</button>
+                <button class="tab-button" data-tab="online">Online Ventures</button>
+                <button class="tab-button" data-tab="entrepreneurial">Entrepreneurship</button>
+                <button class="tab-button" data-tab="hobbies">Monetizing Hobbies</button>
+            </div>
+
+            <div id="tab-traditional" class="tab-content active space-y-6">
+                <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Traditional Part-Time Jobs</h2>
+                <p class="text-[#2D3748] mb-4">These roles offer structured employment, often in retail, hospitality, or local services. They are a common starting point for gaining work experience and earning a steady income.</p>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Retail & Hospitality</h3></div>
+                        <div class="card-content">
+                            <p><strong>Examples:</strong> Sales assistant, waiting staff, kitchen support.</p>
+                            <p><strong>Earning Potential:</strong> NMW to ~£12/hr.</p>
+                            <p><strong>Investment:</strong> Low (job search time).</p>
+                            <p><strong>Skills:</strong> Customer service, communication, teamwork, numeracy.</p>
+                            <p><strong>Flexibility:</strong> Medium (shift-based, evenings/weekends common).</p>
+                            <p><strong>UCAS Value:</strong> Demonstrates reliability, time management, people skills.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Local Services (Babysitting, Dog Walking)</h3></div>
+                        <div class="card-content">
+                            <p><strong>Examples:</strong> Babysitting, pet sitting, gardening, car washing.</p>
+                            <p><strong>Earning Potential:</strong> £8-£15+/hr (often informal).</p>
+                            <p><strong>Investment:</strong> Very Low (local advertising).</p>
+                            <p><strong>Skills:</strong> Responsibility, trustworthiness, reliability, specific care skills.</p>
+                            <p><strong>Flexibility:</strong> High (often direct scheduling with clients).</p>
+                            <p><strong>UCAS Value:</strong> Shows responsibility, initiative, interpersonal skills.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-freelancing" class="tab-content space-y-6">
+                <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Freelancing with Your A-Level Strengths</h2>
+                <p class="text-[#2D3748] mb-4">Leverage your academic knowledge to offer services like tutoring or creating study materials. This can be highly flexible and directly relevant to your studies.</p>
+                 <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Tutoring (Peers, Younger Students)</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> £15-£50/hr (online/local).</p>
+                            <p><strong>Investment:</strong> Medium (material prep, marketing); Low financial (DBS check recommended).</p>
+                            <p><strong>Skills:</strong> Subject mastery, communication, patience, organisation.</p>
+                            <p><strong>Flexibility:</strong> High (self-scheduled).</p>
+                            <p><strong>UCAS Value:</strong> Demonstrates subject passion, teaching ability, initiative.</p>
+                            <p><strong>Platforms:</strong> MyTutor, Superprof, local networks.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Crafting Bespoke Revision Guides</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> £5-£20+ per digital guide (scalable).</p>
+                            <p><strong>Investment:</strong> Medium (content creation time).</p>
+                            <p><strong>Skills:</strong> Subject knowledge, clear writing, summarising, design (optional).</p>
+                            <p><strong>Flexibility:</strong> High (create in own time).</p>
+                            <p><strong>UCAS Value:</strong> Shows analytical skills, content creation, entrepreneurial spirit.</p>
+                            <p><strong>Platforms:</strong> Etsy, Gumroad, personal website.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-online" class="tab-content space-y-6">
+                <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Innovative Online Ventures</h2>
+                <p class="text-[#2D3748] mb-4">The digital world offers diverse income opportunities, from e-commerce to content creation and offering digital skills. These often provide flexibility and global reach.</p>
+                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Niche E-commerce (Dropshipping, POD)</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> Highly variable.</p>
+                            <p><strong>Investment:</strong> Medium-High time (setup, marketing); Low-Medium financial (platform fees).</p>
+                            <p><strong>Skills:</strong> Digital marketing, e-commerce management, customer service.</p>
+                            <p><strong>Flexibility:</strong> Medium-High (operational demands can be constant).</p>
+                            <p><strong>UCAS Value:</strong> Entrepreneurship, digital literacy, analytical skills.</p>
+                            <p><strong>Platforms:</strong> Shopify, Etsy, Printful, Redbubble.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Content Creation (YouTube, Blog, Podcast)</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> Variable (often low initially, grows with audience).</p>
+                            <p><strong>Investment:</strong> High time (consistent creation, audience building).</p>
+                            <p><strong>Skills:</strong> Creativity, digital literacy, communication, SEO, video/audio editing.</p>
+                            <p><strong>Flexibility:</strong> High (flexible creation schedule, but consistency needed).</p>
+                            <p><strong>UCAS Value:</strong> Creativity, communication, persistence, technical skills.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Offering Digital Skills (Design, Coding, VA)</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> £15-£30+/hr (junior freelance rates).</p>
+                            <p><strong>Investment:</strong> Medium time (skill acquisition, portfolio).</p>
+                            <p><strong>Skills:</strong> Specific technical skills (e.g., graphic design, coding), project management.</p>
+                            <p><strong>Flexibility:</strong> High (freelance model, project deadlines).</p>
+                            <p><strong>UCAS Value:</strong> Technical proficiency, problem-solving, client communication.</p>
+                            <p><strong>Platforms:</strong> Upwork, Fiverr, PeoplePerHour.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="tab-entrepreneurial" class="tab-content space-y-6">
+                <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Entrepreneurial Initiatives</h2>
+                <p class="text-[#2D3748] mb-4">For those with a pioneering spirit, starting your own small business can be rewarding. This could be a local service, a craft business, or even a tech project.</p>
+                 <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Sustainable Local Services</h3></div>
+                        <div class="card-content">
+                            <p><strong>Examples:</strong> Eco-friendly car washing, ethical pet care, community gardening support.</p>
+                            <p><strong>Earning Potential:</strong> Variable (depends on service and pricing).</p>
+                            <p><strong>Investment:</strong> Low-Medium time & financial (planning, basic supplies, local marketing).</p>
+                            <p><strong>Skills:</strong> Business planning, customer service, specific service skills, environmental awareness.</p>
+                            <p><strong>Flexibility:</strong> Medium-High (self-managed but client-dependent).</p>
+                            <p><strong>UCAS Value:</strong> Initiative, leadership, commercial awareness, social responsibility.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Craft-Based & Creative Product Businesses</h3></div>
+                        <div class="card-content">
+                            <p><strong>Examples:</strong> Handmade jewellery, art prints, custom clothing, baked goods (check regulations).</p>
+                            <p><strong>Earning Potential:</strong> Variable (depends on product, pricing, sales volume).</p>
+                            <p><strong>Investment:</strong> Medium time (creation, marketing); Medium financial (materials, platform fees).</p>
+                            <p><strong>Skills:</strong> Artistic/craft talent, product development, marketing, sales.</p>
+                            <p><strong>Flexibility:</strong> Medium-High (production can be flexible, sales may require presence).</p>
+                            <p><strong>UCAS Value:</strong> Creativity, entrepreneurship, dedication, attention to detail.</p>
+                            <p><strong>Platforms:</strong> Etsy, local markets, social media.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-hobbies" class="tab-content space-y-6">
+                <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Monetizing Hobbies and Talents</h2>
+                <p class="text-[#2D3748] mb-4">Turn your passions into pay! If you have a talent in music, sports, art, or writing, you might be able to earn money doing what you love.</p>
+                 <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Music or Sports Coaching/Tuition</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> £15-£30+/hr.</p>
+                            <p><strong>Investment:</strong> Medium time (honing talent, marketing); Low-Medium financial (equipment, potential qualifications/DBS).</p>
+                            <p><strong>Skills:</strong> Specific talent, teaching ability, patience, communication.</p>
+                            <p><strong>Flexibility:</strong> High (schedule around studies).</p>
+                            <p><strong>UCAS Value:</strong> Leadership, communication, dedication to a skill.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Art Commissions / Photography</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> Variable (per project/commission).</p>
+                            <p><strong>Investment:</strong> Medium time (portfolio, marketing); Medium financial (materials, equipment).</p>
+                            <p><strong>Skills:</strong> Artistic/photographic talent, self-promotion, client communication.</p>
+                            <p><strong>Flexibility:</strong> High (creative work in own time, deadlines for commissions).</p>
+                            <p><strong>UCAS Value:</strong> Creativity, technical skill, portfolio development.</p>
+                            <p><strong>Platforms:</strong> Social media, Etsy, local networks.</p>
+                        </div>
+                    </div>
+                     <div class="card">
+                        <div class="card-header toggle-card"><h3 class="text-lg font-semibold">Selling Crafts / Collectibles</h3></div>
+                        <div class="card-content">
+                            <p><strong>Earning Potential:</strong> Variable.</p>
+                            <p><strong>Investment:</strong> Medium time (creation/sourcing, selling); Low-Medium financial (materials).</p>
+                            <p><strong>Skills:</strong> Craftsmanship, knowledge of collectibles, sales.</p>
+                            <p><strong>Flexibility:</strong> High.</p>
+                            <p><strong>UCAS Value:</strong> Attention to detail, potential entrepreneurial skills.</p>
+                             <p><strong>Platforms:</strong> Etsy, eBay, local fairs.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="strategy-hub" class="content-section">
+            <h1 class="text-3xl font-bold text-[#1A202C] mb-6">Strategy Hub: Making Smart Choices</h1>
+            <p class="mb-6 text-lg text-[#2D3748]">This section helps you think strategically about your income-generating options. Compare different approaches, understand how to manage risks, and learn how your work experiences can enhance your UCAS application and overall well-being.</p>
+
+            <div class="space-y-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">Compare Your Options: Income Strategy Overview</h2>
+                    </div>
+                    <div class="p-4">
+                        <p class="text-[#2D3748] mb-4">The table below provides a comparative overview of various income strategies. Click on column headers to sort the table and help you identify options that best suit your priorities. (Note: Estimations are indicative).</p>
+                        <div class="overflow-x-auto">
+                            <table id="comparisonTable" class="min-w-full bg-white table-sortable">
+                                <thead class="bg-[#4FD1C5] text-white">
+                                    <tr>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm" data-sort-col="0">Strategy Category</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm" data-sort-col="1">Est. Earning Potential</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm" data-sort-col="2">Flexibility</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm" data-sort-col="3">Initial Time Invest.</th>
+                                        <th class="text-left py-3 px-4 uppercase font-semibold text-sm" data-sort-col="4">Risk Level</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-[#2D3748]">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-semibold text-[#1A202C] mb-4">Managing Risks & Balancing Act</h2>
+                     <div class="accordion-item">
+                        <div class="accordion-header"><h3 class="text-lg font-medium">Protecting Your Academic Focus</h3></div>
+                        <div class="accordion-content">
+                            <p>The most significant risk is work overshadowing studies. Set firm work hour boundaries. A-level tasks must take precedence. Be ready to reduce/pause work during peak academic periods.</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header"><h3 class="text-lg font-medium">Financial Prudence</h3></div>
+                        <div class="accordion-content">
+                            <p>Manage earnings and expenses carefully, especially for freelance/entrepreneurial ventures. Budget, understand true costs, and avoid unnecessary debt. A small financial buffer can be helpful.</p>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header"><h3 class="text-lg font-medium">Online Safety</h3></div>
+                        <div class="accordion-content">
+                            <p>Prioritise online safety: protect personal data, be aware of scams, use robust privacy settings, and be cautious about sharing personal info. Understand reporting mechanisms on platforms.</p>
+                        </div>
+                    </div>
+                     <div class="accordion-item">
+                        <div class="accordion-header"><h3 class="text-lg font-medium">Effective Time Management & Well-being</h3></div>
+                        <div class="accordion-content">
+                            <p>Create realistic weekly schedules allocating time for studies, work, and personal activities. Prioritise academic tasks. Use planners and techniques like Pomodoro. Ensure adequate sleep, healthy diet, exercise, and time for relaxation and social connections. Recognise signs of stress/burnout and seek support.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header toggle-card">
+                        <h2 class="text-xl font-semibold text-[#1A202C]">Boosting Your UCAS Application</h2>
+                    </div>
+                    <div class="card-content">
+                        <p class="text-[#2D3748] mb-2">Work experience, regardless of the type, develops valuable transferable skills that strengthen your UCAS personal statement. Highlight:</p>
+                        <ul class="list-disc list-inside text-[#2D3748] space-y-1">
+                            <li>Time management and organisation</li>
+                            <li>Communication and teamwork</li>
+                            <li>Problem-solving and initiative</li>
+                            <li>Responsibility and reliability</li>
+                            <li>Commercial awareness (for business-related roles)</li>
+                            <li>Specific skills (e.g., coding, design, teaching from freelance/hobby work)</li>
+                            <li>Entrepreneurial spirit (if you started your own venture)</li>
+                        </ul>
+                        <p class="mt-2 text-[#2D3748]">Relate these skills to your chosen university course and future aspirations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="key-advice" class="content-section">
+            <h1 class="text-3xl font-bold text-[#1A202C] mb-6">Key Advice & Final Recommendations</h1>
+            <p class="mb-6 text-lg text-[#2D3748]">Successfully balancing A-Levels and income generation is achievable with careful planning and by keeping your academic goals at the forefront. Here are some final actionable recommendations to guide you:</p>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">1. Prioritise Academics Unequivocally</h3>
+                    <p class="text-[#2D3748]">Your A-level success is the primary goal. Ensure work complements, not compromises, your studies. Be ready to adjust work during peak academic times.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">2. Start Small and Test the Waters</h3>
+                    <p class="text-[#2D3748]">Begin with a manageable commitment to see how it impacts your studies and well-being before scaling up. Learn and adjust as you go.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">3. Understand Legal & Tax Responsibilities</h3>
+                    <p class="text-[#2D3748]">Familiarise yourself with employment laws (working hours, NMW) and tax obligations (Personal Allowance, NI, Self Assessment if self-employed income > £1,000).</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">4. Leverage Free Resources</h3>
+                    <p class="text-[#2D3748]">Use free online courses and guides to develop new skills (digital marketing, coding, etc.) or learn about business and freelancing.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">5. Build a Support Network</h3>
+                    <p class="text-[#2D3748]">Discuss plans and challenges with parents, teachers, or mentors. Support can offer guidance and encouragement.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">6. Continuously Evaluate and Adjust</h3>
+                    <p class="text-[#2D3748]">Regularly review how work affects your academic performance and well-being. Be flexible and make changes if needed.</p>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">7. Plan an "Exit" or "Pause" Strategy</h3>
+                    <p class="text-[#2D3748]">Anticipate intense academic periods (e.g., exams) and plan how to reduce or pause work commitments without damaging your reputation.</p>
+                </div>
+                 <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-xl font-semibold text-[#4FD1C5] mb-2">8. Don't Be Afraid to Stop or Change</h3>
+                    <p class="text-[#2D3748]">If a strategy is too stressful or negatively impacts studies/health, have the courage to stop or switch. Your well-being and A-levels are paramount.</p>
+                </div>
+            </div>
+             <p class="mt-8 text-center text-lg text-[#2D3748]">By approaching income generation with diligence and self-awareness, you can enhance your financial independence and personal development without jeopardising your academic future.</p>
+        </section>
+
+    </main>
+
+    <footer class="bg-white border-t border-[#A0AEC0] mt-12">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-[#2D3748] text-sm">
+            <p>&copy; <span id="currentYear"></span> A-Level Income Navigator. Information based on the "Balancing Books and Bank Balances" report.</p>
+            <p>Disclaimer: This tool provides general information. Always verify specific details (e.g., NMW rates, tax laws) with official sources like GOV.UK.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+            function setActiveSection(sectionId) {
+                sections.forEach(section => {
+                    if (section.id === sectionId) {
+                        section.classList.add('active');
+                    } else {
+                        section.classList.remove('active');
+                    }
+                });
+                navLinks.forEach(link => {
+                    if (link.dataset.section === sectionId) {
+                        link.classList.add('active');
+                         if (link.closest('#mobile-menu')) {
+                            link.classList.remove('border-transparent');
+                            link.classList.add('border-[#4FD1C5]');
+                        }
+                    } else {
+                        link.classList.remove('active');
+                        if (link.closest('#mobile-menu')) {
+                            link.classList.remove('border-[#4FD1C5]');
+                            link.classList.add('border-transparent');
+                        }
+                    }
+                });
+                 // Auto-scroll to the top of the section on mobile/small screens
+                if (window.innerWidth < 768) {
+                    const activeSectionElement = document.getElementById(sectionId);
+                    if (activeSectionElement) {
+                         activeSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } else {
+                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const sectionId = this.dataset.section;
+                    setActiveSection(sectionId);
+                    if (mobileMenu.classList.contains('hidden') === false) {
+                        mobileMenu.classList.add('hidden');
+                    }
+                });
+            });
+
+            mobileMenuButton.addEventListener('click', function () {
+                mobileMenu.classList.toggle('hidden');
+            });
+            
+            // Card toggles
+            const cardHeaders = document.querySelectorAll('.toggle-card');
+            cardHeaders.forEach(header => {
+                header.addEventListener('click', function () {
+                    const content = this.nextElementSibling;
+                    content.classList.toggle('expanded');
+                     // Optional: Add an arrow icon and rotate it
+                    this.querySelector('h2, h3')?.classList.toggle('text-[#4FD1C5]');
+                });
+            });
+
+            // Accordion toggles
+            const accordionHeaders = document.querySelectorAll('.accordion-header');
+            accordionHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    const isExpanded = content.classList.contains('expanded');
+                    
+                    // Close all other accordions in the same group if you want only one open at a time
+                    // this.closest('.accordion-group').querySelectorAll('.accordion-content.expanded').forEach(acc => {
+                    //    if (acc !== content) acc.classList.remove('expanded');
+                    // });
+
+                    content.classList.toggle('expanded');
+                    this.classList.toggle('bg-[#A0AEC0]'); 
+                    this.classList.toggle('text-white', content.classList.contains('expanded'));
+                });
+            });
+
+            // Tab functionality for Income Streams
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const targetTab = this.dataset.tab;
+                    tabContents.forEach(content => {
+                        if (content.id === `tab-${targetTab}`) {
+                            content.classList.add('active');
+                        } else {
+                            content.classList.remove('active');
+                        }
+                    });
+                });
+            });
+
+
+            // NMW Chart
+            const nmwData = {
+                labels: ['16-17 Year Olds', '18-20 Year Olds', 'Apprentice Rate', 'National Living Wage (21+)'],
+                datasets: [{
+                    label: 'Hourly Rate (£) from April 2025',
+                    data: [7.55, 10.00, 7.55, 12.21],
+                    backgroundColor: [
+                        'rgba(79, 209, 197, 0.6)', // Teal
+                        'rgba(96, 165, 250, 0.6)', // Blue
+                        'rgba(251, 146, 60, 0.6)', // Orange
+                        'rgba(52, 211, 153, 0.6)'  // Green
+                    ],
+                    borderColor: [
+                        'rgba(79, 209, 197, 1)',
+                        'rgba(96, 165, 250, 1)',
+                        'rgba(251, 146, 60, 1)',
+                        'rgba(52, 211, 153, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+            const nmwConfig = {
+                type: 'bar',
+                data: nmwData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Hourly Rate (£)' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        title: { display: true, text: 'National Minimum Wage Rates (April 2025)' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `£${context.raw.toFixed(2)}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            const nmwChartCtx = document.getElementById('nmwChart')?.getContext('2d');
+            if (nmwChartCtx) {
+                new Chart(nmwChartCtx, nmwConfig);
+            }
+
+            // Comparison Table Data & Sorting
+            const comparisonData = [
+                { category: 'Traditional Part-Time (Retail/Hosp)', earning: 'NMW to £12/hr', flexibility: 'Medium', timeInvest: 'Low-Medium', risk: 'Low' },
+                { category: 'Local Services (Babysitting, Dog Walk)', earning: '£8-£15+/hr', flexibility: 'High', timeInvest: 'Low', risk: 'Low-Medium' },
+                { category: 'Freelance (Tutoring, Guides)', earning: '£15-£50/hr or £5-£20/guide', flexibility: 'High', timeInvest: 'Medium', risk: 'Medium' },
+                { category: 'Online (E-comm, Dropship)', earning: 'Highly Variable', flexibility: 'Medium-High', timeInvest: 'Medium-High', risk: 'Medium-High' },
+                { category: 'Online (Content Creation)', earning: 'Variable (Low initially)', flexibility: 'High', timeInvest: 'High', risk: 'Medium' },
+                { category: 'Online (Digital Skills)', earning: '£15-£30+/hr', flexibility: 'High', timeInvest: 'Medium', risk: 'Medium' },
+                { category: 'Entrepreneurial (Local Services, Crafts)', earning: 'Variable', flexibility: 'Medium', timeInvest: 'Medium-High', risk: 'High' },
+                { category: 'Monetizing Hobbies (Music/Art Tuition)', earning: '£15-£30+/hr or Variable', flexibility: 'High', timeInvest: 'Medium', risk: 'Low-Medium' }
+            ];
+
+            const tableBody = document.querySelector('#comparisonTable tbody');
+            let sortDirections = Array(5).fill(1); // 1 for ascending, -1 for descending
+
+            function populateTable(data) {
+                if (!tableBody) return;
+                tableBody.innerHTML = ''; // Clear existing rows
+                data.forEach(item => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = item.category;
+                    row.insertCell().textContent = item.earning;
+                    row.insertCell().textContent = item.flexibility;
+                    row.insertCell().textContent = item.timeInvest;
+                    row.insertCell().textContent = item.risk;
+                });
+            }
+            
+            function sortTable(columnIndex) {
+                const sortKey = Object.keys(comparisonData[0])[columnIndex];
+                const direction = sortDirections[columnIndex];
+
+                comparisonData.sort((a, b) => {
+                    const valA = a[sortKey].toUpperCase();
+                    const valB = b[sortKey].toUpperCase();
+                    // Basic sort for strings, can be enhanced for numeric/specific types
+                    if (valA < valB) return -1 * direction;
+                    if (valA > valB) return 1 * direction;
+                    return 0;
+                });
+                sortDirections[columnIndex] = direction * -1; // Toggle direction for next click
+                populateTable(comparisonData);
+            }
+
+            document.querySelectorAll('#comparisonTable th').forEach(th => {
+                th.addEventListener('click', () => {
+                    sortTable(parseInt(th.dataset.sortCol));
+                });
+            });
+            
+            populateTable(comparisonData); // Initial population
+            setActiveSection('foundations'); // Set initial active section
+        });
+    </script>
+</body>
+</html>

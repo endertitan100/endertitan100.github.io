@@ -1,0 +1,119 @@
+#portfolio {
+    color: var(--text-color);
+    float: left;
+    padding: 20px;
+    min-width: 300px;
+    width: calc(80% - 100px);
+    margin-top: -20px;
+    margin-left: -5px;
+    background-color: var(--dark-bg);
+    border-radius: 5px;
+    border: 2px solid var(--border-color);
+}
+
+#portfolio h2 {
+    text-align: center;
+}
+@media only screen and (width >= 1300px) {
+    .portfolio-item {
+        margin: 10px;
+        padding: 10px;
+        background-color: var(--bg);
+        border-radius: 5px;
+        color: var(--text-color);
+        width: calc(70% - 10px);
+
+        display: grid;
+        grid-template-columns: repeat(2, 200px) calc(220% - 100vw) 1fr;
+        grid-template-rows: repeat(2, 100px);
+        grid-column-gap: 10px;
+        grid-row-gap: 0px; 
+    }
+
+    .portfolio-button {
+        grid-area: 2 / 4 / 3 / 5;
+    }
+    .portfolio-date {
+        text-align: right;
+        grid-area: 1 / 4 / 2 / 5; 
+    }
+    .portfolio-text-content {
+        grid-area: 1 / 2 / 3 / 3;
+    }
+    .portfolio-item img {
+        height: 100%;
+        grid-area: 1 / 1 / 3 / 2;
+    }
+} 
+@media only screen and (width < 1300px){
+    .portfolio-item {
+        margin: 10px;
+        padding: 10px;
+        background-color: var(--bg);
+        border-radius: 5px;
+        color: var(--text-color);
+        width: calc(100% - 20px);
+
+        display: grid;
+        grid-template-columns: 40% 20% 40%;
+        grid-template-rows: repeat(2, 25%) 35% 1fr;
+        grid-column-gap: 0px;
+        grid-row-gap: 0px; 
+    }
+
+    .portfolio-button {
+        grid-area: 4 / 3 / 5 / 4;
+    }
+    .portfolio-date {
+        text-align: center;
+        grid-area: 4 / 1 / 5 / 2;
+    }
+    .portfolio-text-content {
+        grid-area: 3 / 1 / 4 / 4;
+    }
+    .portfolio-item img {
+        width: 100%;
+        grid-area: 1 / 1 / 3 / 4;
+    }
+}
+
+.portfolio-button {
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.portfolio-date {
+    font-size: 0.8em;
+    color: var(--text-color);
+    margin-top: 5px;
+}
+.portfolio-item img {
+    margin-right: 15px;
+    aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.portfolio-item h3 {
+    margin: 5px;
+}
+.portfolio-item p {
+    margin: 5px;
+}
+
+.portfolio-text-content h3 {
+  margin-top: 0; /* Remove default browser margin for a cleaner look */
+  margin-bottom: 8px; /* Space between the project name and description */
+  font-size: 1.5em; /* Example size */
+}
+
+.portfolio-text-content p {
+  margin-top: 0;
+  margin-bottom: 10px; /* Space below the description */
+  font-size: 1em; /* Example size */
+  color: #555; /* Example color */
+}

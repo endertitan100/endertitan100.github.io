@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Report: Finding N Related Vectors</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Report Info: Metrics (Euclidean vs. Cosine, Sec 2). Goal: Compare. Viz/Method: Textual comparison, side-by-side display. Interaction: Tabbed view. Justification: Clarify differences. Library: HTML/JS.
+        - Report Info: Algorithm Complexities (Throughout Sec 3, 5, 6, 7). Goal: Inform & Compare. Viz/Method: Display O-notation clearly. Conceptual Chart.js line chart showing idealized scaling of query time vs. P for Brute-Force, Log P, P*M. Interaction: View chart. Justification: Visualize performance differences. Library: Chart.js, HTML/JS.
+        - Report Info: Table 2.1 (Metric Comparison). Goal: Compare. Viz/Method: HTML table. Interaction: None needed, static comparison. Justification: Direct port of key info. Library: HTML.
+        - Report Info: Table 8.1 (Algorithm Comparison). Goal: Compare. Viz/Method: Interactive HTML table. Interaction: Sort by columns (Build Time, Query Time, etc.). Justification: Allow user-driven analysis. Library: HTML/JS.
+        - Report Info: Recommendations (Sec 8.4). Goal: Guide. Viz/Method: Series of dropdown selectors (Dataset Size, Dimensionality, etc.) leading to textual recommendation. Interaction: User selects options, app displays corresponding advice. Justification: Interactive decision support. Library: HTML/JS.
+        - Report Info: Table 9.1 (Library Overview). Goal: Inform. Viz/Method: Interactive HTML table. Interaction: Sort by columns. Justification: Easy reference. Library: HTML/JS.
+        - General Content: Textual explanations, formulas. Goal: Inform. Viz/Method: Structured HTML (headings, paragraphs, lists). Formulas rendered as text. Interaction: Accordions for hiding/showing detailed text. Justification: Manage information density. Library: HTML/JS.
+        - CONFIRMING NO SVG/Mermaid. All visuals via Chart.js (Canvas) or HTML/CSS/Tailwind. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link { transition: all 0.3s ease; }
+        .nav-link.active { color: #0284c7; border-bottom-color: #0284c7; font-weight: 600; }
+        .nav-link:hover { color: #0369a1; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        h2 { font-size: 1.75rem; font-weight: 600; margin-bottom: 1rem; color: #78350f; }
+        h3 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #a16207; }
+        h4 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #ca8a04; }
+        p, li { line-height: 1.6; margin-bottom: 0.75rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1rem; }
+        th, td { border: 1px solid #d4d4d8; padding: 0.75rem; text-align: left; }
+        th { background-color: #f5f5f4; font-weight: 600; cursor: pointer; }
+        th:hover { background-color: #e7e5e4; }
+        .formula { font-family: 'Courier New', Courier, monospace; background-color: #f5f5f4; padding: 0.25rem 0.5rem; border-radius: 0.25rem; display: inline-block; }
+        .accordion-header { cursor: pointer; padding: 0.75rem; background-color: #f5f5f4; border: 1px solid #e7e5e4; border-radius: 0.375rem; margin-bottom: 0.25rem; display: flex; justify-content: space-between; align-items: center; }
+        .accordion-header:hover { background-color: #e7e5e4; }
+        .accordion-content { display: none; padding: 1rem; border: 1px solid #e7e5e4; border-top: none; border-radius: 0 0 0.375rem 0.375rem; }
+        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 350px; max-height: 400px; margin-bottom: 2rem; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        .tab-button { padding: 0.5rem 1rem; margin-right: 0.5rem; border-radius: 0.375rem 0.375rem 0 0; background-color: #e7e5e4; cursor: pointer; }
+        .tab-button.active { background-color: #0284c7; color: white; }
+        .tab-content { display: none; padding: 1rem; border: 1px solid #d4d4d8; border-top: none; border-radius: 0 0 0.375rem 0.375rem;}
+        .tab-content.active { display: block; }
+        select, button.recommendation-button {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.375rem;
+            background-color: white;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button.recommendation-button {
+            background-color: #0ea5e9;
+            color: white;
+            font-weight: 500;
+        }
+        button.recommendation-button:hover {
+            background-color: #0284c7;
+        }
+        .recommendation-output {
+            margin-top: 1rem;
+            padding: 1rem;
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 0.375rem;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-neutral-800 antialiased">
+
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-2xl font-bold text-sky-700">Finding N Related Vectors</h1>
+                <nav class="hidden md:flex space-x-1 items-center overflow-x-auto whitespace-nowrap">
+                    <a href="#introduction" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Introduction</a>
+                    <a href="#metrics" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Metrics</a>
+                    <a href="#exact-search" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Exact Search</a>
+                    <a href="#ann-fundamentals" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">ANN Fundamentals</a>
+                    <a href="#ann-algorithms" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">ANN Algorithms</a>
+                    <a href="#comparison" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Comparison & Recs</a>
+                    <a href="#libraries" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Libraries</a>
+                    <a href="#conclusion" class="nav-link px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent">Conclusion</a>
+                </nav>
+                <button id="mobile-menu-button" class="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500">
+                    <span class="sr-only">Open main menu</span>
+                    <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="md:hidden hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                <a href="#introduction" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Introduction</a>
+                <a href="#metrics" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Metrics</a>
+                <a href="#exact-search" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Exact Search</a>
+                <a href="#ann-fundamentals" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">ANN Fundamentals</a>
+                <a href="#ann-algorithms" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">ANN Algorithms</a>
+                <a href="#comparison" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Comparison & Recs</a>
+                <a href="#libraries" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Libraries</a>
+                <a href="#conclusion" class="nav-link block px-3 py-2 rounded-md text-base font-medium border-b-2 border-transparent">Conclusion</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <section id="introduction" class="content-section active">
+            <h2>1. Introduction</h2>
+            <p>This application explores the problem of efficiently retrieving the $N$ most "related" vectors to a given query vector $q$ from a dataset $D$. The dataset $D$ consists of $P$ vectors, each in an $M$-dimensional space. "Relatedness" is defined by a distance or similarity metric. This is known as the k-Nearest Neighbor (kNN) search problem, where $k=N$.</p>
+            
+            <h3>1.1. Context and Applications</h3>
+            <p>Nearest neighbor search (NNS) is vital in many areas, including:</p>
+            <ul>
+                <li>Recommendation Systems (e.g., Spotify)</li>
+                <li>Information Retrieval & Semantic Search</li>
+                <li>Computer Vision (e.g., image retrieval)</li>
+                <li>Machine Learning & Pattern Recognition (kNN classifiers, clustering)</li>
+                <li>Bioinformatics and Data Mining</li>
+            </ul>
+            <p>The rise of high-dimensional vector embeddings from machine learning models has increased the need for efficient NNS.</p>
+
+            <h3>1.2. Overview of Approaches</h3>
+            <p>Two main strategies exist:</p>
+            <ol>
+                <li><strong>Exact Nearest Neighbor (ENN) Search:</strong> Guarantees finding the true $N$ nearest neighbors. Brute-force kNN is the basic ENN method but struggles with large $P$ or $M$.</li>
+                <li><strong>Approximate Nearest Neighbor (ANN) Search:</strong> Trades some accuracy for speed and efficiency. ANN aims for "close enough" neighbors, crucial for real-time applications with large, high-dimensional data.</li>
+            </ol>
+            <p>This interactive report covers both approaches, their mechanisms, complexities, and practical implications.</p>
+        </section>
+
+        <section id="metrics" class="content-section">
+            <h2>2. Quantifying Vector Relatedness: Distance and Similarity Metrics</h2>
+            <p>"Relatedness" between vectors $a$ and $b$ in $\mathbb{R}^M$ is quantified by their proximity, using distance (smaller is similar) or similarity scores (larger is similar). The choice of metric is critical and depends on data nature and application goals.</p>
+
+            <div class="mb-6">
+                <div class="flex border-b border-gray-300">
+                    <button class="tab-button active" data-tab="euclidean">Euclidean Distance</button>
+                    <button class="tab-button" data-tab="cosine">Cosine Similarity</button>
+                    <button class="tab-button" data-tab="other-metrics">Other Metrics</button>
+                </div>
+                <div id="euclidean-content" class="tab-content active">
+                    <h3>2.1. Euclidean Distance (L2 Norm)</h3>
+                    <p>Represents the straight-line distance between two points.</p>
+                    <p>Formula: <span class="formula">d<sub>E</sub>(a, b) = ||a - b||<sub>2</sub> = &radic;(&sum; (a<sub>i</sub> - b<sub>i</sub>)<sup>2</sup>)</span></p>
+                    <h4>Properties:</h4>
+                    <ul>
+                        <li><strong>Magnitude Sensitivity:</strong> Influenced by vector length.</li>
+                        <li><strong>Spatial Proximity:</strong> Small distance means points are close in space.</li>
+                    </ul>
+                    <h4>Use Cases:</h4>
+                    <p>When absolute values/magnitudes matter (e.g., counts, physical measurements, raw pixel values, K-Means clustering).</p>
+                </div>
+                <div id="cosine-content" class="tab-content">
+                    <h3>2.2. Cosine Similarity</h3>
+                    <p>Measures similarity based on the cosine of the angle between vectors, focusing on orientation, not magnitude.</p>
+                    <p>Formula: <span class="formula">sim<sub>cos</sub>(a, b) = (a &middot; b) / (||a||<sub>2</sub> ||b||<sub>2</sub>)</span></p>
+                    <p>Range: -1 (opposite) to 1 (same direction). Cosine Distance: <span class="formula">d<sub>cos</sub>(a, b) = 1 - sim<sub>cos</sub>(a, b)</span>.</p>
+                    <h4>Properties:</h4>
+                    <ul>
+                        <li><strong>Magnitude Invariance:</strong> Unaffected by vector length/scale.</li>
+                        <li><strong>Directional Similarity:</strong> High similarity means vectors point in the same general direction.</li>
+                        <li><strong>Semantic Similarity:</strong> Effective for text embeddings where direction captures meaning.</li>
+                    </ul>
+                    <h4>Use Cases:</h4>
+                    <p>When direction is more important than magnitude (e.g., NLP, text comparison, semantic search, embeddings trained with cosine loss).</p>
+                </div>
+                <div id="other-metrics-content" class="tab-content">
+                    <h3>2.3. Other Metrics (Brief Mention)</h3>
+                    <ul>
+                        <li><strong>Manhattan Distance (L1 Norm):</strong> <span class="formula">d<sub>M</sub>(a, b) = &sum; |a<sub>i</sub> - b<sub>i</sub>|</span>. Distance along axes.</li>
+                        <li><strong>Minkowski Distance:</strong> Generalization of L1 and L2. <span class="formula">d<sub>p</sub>(a, b) = (&sum; |a<sub>i</sub> - b<sub>i</sub>|<sup>p</sup>)<sup>1/p</sup></span>.</li>
+                        <li><strong>Hamming Distance:</strong> Counts different positions for binary vectors/strings.</li>
+                        <li><strong>Jaccard Similarity/Distance:</strong> For finite sets. Similarity = <span class="formula">|A &cap; B| / |A &cup; B|</span>.</li>
+                        <li><strong>Dot Product:</strong> <span class="formula">a &middot; b</span>. Considers angle and magnitude. Equals cosine similarity for L2-normalized vectors.</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>2.4. Metric Choice Considerations & Insights</h3>
+            <div class="accordion-header"><span>Normalization Impact</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>L2-normalizing vectors (scaling to unit length) makes minimizing Euclidean distance mathematically equivalent to maximizing cosine similarity: <span class="formula">||x<sub>norm</sub> - y<sub>norm</sub>||<sub>2</sub><sup>2</sup> = 2 (1 - sim<sub>cos</sub>(x, y))</span>. This allows using Euclidean-optimized algorithms for cosine similarity problems by pre-normalizing data.</p>
+            </div>
+            <div class="accordion-header"><span>Data Type and Semantics</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>Cosine similarity is often better for text/semantic embeddings (direction matters). Euclidean distance suits data where magnitude is key (pixel intensities, counts).</p>
+            </div>
+             <div class="accordion-header"><span>Dimensionality (Curse of Dimensionality - CoD)</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>Both metrics are affected by CoD, where distances concentrate in high dimensions. Cosine similarity might retain more discriminative power in some high-dimensional sparse scenarios (e.g., text embeddings). Normalization can help mitigate CoD effects.</p>
+            </div>
+
+            <h4>Table 2.1: Comparison of Euclidean Distance and Cosine Similarity</h4>
+            <table>
+                <thead>
+                    <tr><th>Feature</th><th>Euclidean Distance (d<sub>E</sub>)</th><th>Cosine Similarity (sim<sub>cos</sub>)</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Formula</strong></td><td>&radic;(&sum;(a<sub>i</sub> - b<sub>i</sub>)<sup>2</sup>)</td><td>(a &middot; b) / (||a||<sub>2</sub> ||b||<sub>2</sub>)</td></tr>
+                    <tr><td><strong>Range</strong></td><td>[0, &infin;)</td><td>[-1, 1] (Similarity); [0, 2] (Distance = 1 - sim<sub>cos</sub>)</td></tr>
+                    <tr><td><strong>Measures</strong></td><td>Straight-line distance</td><td>Cosine of the angle</td></tr>
+                    <tr><td><strong>Sensitivity to Mag.</strong></td><td>Yes</td><td>No</td></tr>
+                    <tr><td><strong>Typical Use Cases</strong></td><td>Image pixels, counts, K-Means</td><td>Text similarity, Semantic search</td></tr>
+                    <tr><td><strong>Normalization Impact</strong></td><td>Changes distances; L2-normed d<sub>E</sub> rank equivalent to sim<sub>cos</sub></td><td>No impact on similarity score</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="exact-search" class="content-section">
+            <h2>3. Exact Nearest Neighbor Search: Brute-Force kNN</h2>
+            <p>The brute-force kNN algorithm guarantees finding the exact $N$ nearest neighbors by comparing the query vector to every vector in the dataset.</p>
+            
+            <h3>3.1. Algorithm Steps</h3>
+            <ol>
+                <li><strong>Distance/Similarity Computation:</strong> Calculate distance/similarity between query $q$ and all $P$ vectors $p_i$ in dataset $D$.</li>
+                <li><strong>Top-N Selection:</strong>
+                    <ul>
+                        <li><strong>Sorting:</strong> Sort all $P$ values and pick the top $N$.</li>
+                        <li><strong>Heap (Priority Queue):</strong> Maintain a heap of size $N$ with the best neighbors found so far. For each new vector, if it's better than the worst in the heap, replace it.</li>
+                    </ul>
+                </li>
+                <li><strong>Output:</strong> Return the $N$ selected neighbors.</li>
+            </ol>
+
+            <h3>3.2. Complexity Analysis</h3>
+            <ul>
+                <li><strong>Time Complexity:</strong>
+                    <ul>
+                        <li>Distance Computation: $O(P \times M)$</li>
+                        <li>Selection (Sorting): $O(P \log P)$</li>
+                        <li>Selection (Heap): $O(P \log N)$</li>
+                        <li><strong>Total (Heap): $O(P \times M + P \log N)$</strong> (Dominant term often $O(P \times M)$)</li>
+                    </ul>
+                </li>
+                <li><strong>Space Complexity:</strong> $O(P \times M)$ (to store dataset). Auxiliary $O(P)$ or $O(N)$.</li>
+            </ul>
+
+            <h3>3.3. Scalability Challenges & The Curse of Dimensionality</h3>
+            <p>Brute-force kNN scales poorly:</p>
+            <ul>
+                <li><strong>Linear Scan Limitation:</strong> Query time $O(P \times M)$ is infeasible for large $P$ or high $M$.</li>
+                <li><strong>Curse of Dimensionality (CoD):</strong>
+                    <ul>
+                        <li>Space becomes sparse, points are far apart.</li>
+                        <li>Distances concentrate, making "near" vs. "far" less distinct.</li>
+                        <li>Indexing structures (like k-d trees) become inefficient.</li>
+                    </ul>
+                </li>
+            </ul>
+            <p>CoD increases computation cost and can reduce the semantic value of "nearest" if all points are similarly distant.</p>
+        </section>
+
+        <section id="ann-fundamentals" class="content-section">
+            <h2>4. Approximate Nearest Neighbor (ANN) Search Fundamentals</h2>
+            <p>ANN search addresses the scalability issues of exact methods for large, high-dimensional datasets.</p>
+            
+            <h3>4.1. The Core Idea: Approximation for Speed</h3>
+            <p>ANN algorithms trade guaranteed accuracy for significant improvements in computational efficiency (query speed, memory). They use shortcuts (indexing, dimensionality reduction) to narrow the search to a candidate subset, aiming for sub-linear query time (e.g., $O(\log P)$).</p>
+
+            <h3>4.2. The Speed vs. Accuracy Trade-off</h3>
+            <p>This is the central principle of ANN. Faster algorithms examine less data, increasing the chance of missing true neighbors.</p>
+            <ul>
+                <li><strong>Approximation Factor (&epsilon;):</strong> A $(1+\epsilon)$-approximation returns $p'$ such that $d(q, p') \le (1+\epsilon) d(q, p^*)$, where $p^*$ is the true nearest neighbor.</li>
+                <li><strong>Recall@N:</strong> The proportion of true top-$N$ neighbors retrieved by the ANN algorithm.
+                    <span class="formula">Recall@N = |True NN<sub>N</sub> &cap; ANN Results<sub>N</sub>| / N</span>.
+                    Tuning ANN parameters often involves balancing Recall@N and query speed (QPS) or latency.
+                </li>
+            </ul>
+            <p>Approximation can mean some true neighbors are *missed entirely*, not just replaced by slightly farther ones. This is why Recall@N is a key metric.</p>
+            
+            <h4>Conceptual Complexity Scaling</h4>
+            <p>This chart illustrates idealized query time scaling for different complexity classes. Actual ANN performance varies greatly based on algorithm, data, and tuning.</p>
+            <div class="chart-container bg-white p-4 rounded-lg shadow">
+                <canvas id="complexityChart"></canvas>
+            </div>
+        </section>
+
+        <section id="ann-algorithms" class="content-section">
+            <h2>5. ANN Algorithms</h2>
+            <p>This section explores major categories of ANN algorithms. Each uses different strategies to achieve the speed-accuracy trade-off.</p>
+
+            <div class="accordion-header"><span>5.1 Tree-Based Partitioning (k-d Trees, Ball Trees)</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>Tree-based methods recursively partition the M-dimensional space and organize partitions into a tree, allowing pruning of irrelevant space during search.</p>
+                <h4>k-d Trees</h4>
+                <ul>
+                    <li><strong>Principle:</strong> Binary tree partitioning space with axis-aligned hyperplanes.</li>
+                    <li><strong>Construction:</strong> Recursively split along dimensions at median points. Complexity: $O(M P \log P)$.</li>
+                    <li><strong>Query:</strong> Traverse to a leaf, then backtrack and prune branches that cannot contain closer neighbors.</li>
+                    <li><strong>Complexity (Query):</strong> Avg $O(M \log P)$ (low M), Worst $O(M P)$ (high M).</li>
+                    <li><strong>Limitations:</strong> Effective for low M ($<20$). Performance degrades severely in high dimensions (CoD).</li>
+                </ul>
+                <h4>Ball Trees</h4>
+                <ul>
+                    <li><strong>Principle:</strong> Binary tree partitioning with nested hyperspheres (balls).</li>
+                    <li><strong>Construction:</strong> Recursively define bounding balls and partition points. Complexity: $O(M P \log P)$ (can be slower than k-d).</li>
+                    <li><strong>Query:</strong> Traverse, prioritizing closer balls, prune balls whose min distance to query > current best.</li>
+                    <li><strong>Complexity (Query):</strong> Avg $O(M \log P)$.</li>
+                    <li><strong>Performance:</strong> More robust to high M than k-d trees but still suffers from CoD. Requires metric distances (triangle inequality).</li>
+                </ul>
+            </div>
+
+            <div class="accordion-header"><span>5.2 Hashing-Based Approaches (LSH)</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>Hashing methods map data points to hash codes/buckets so similar points likely share buckets.</p>
+                <h4>Locality-Sensitive Hashing (LSH)</h4>
+                <ul>
+                    <li><strong>Core Idea:</strong> Uses hash functions where collision probability is higher for close points.</li>
+                    <li><strong>LSH Families:</strong> Specific to distance metrics (e.g., Bit Sampling for Hamming, Random Projection for Cosine, p-Stable Distributions for L<sub>p</sub>).</li>
+                    <li><strong>Algorithm:</strong>
+                        <ol>
+                            <li>Construct $L$ hash tables, each with $k$ hash functions. Hash all data points.</li>
+                            <li>Query: Hash query, retrieve candidates from corresponding buckets in $L$ tables. Re-rank candidates.</li>
+                        </ol>
+                    </li>
+                    <li><strong>Complexity:</strong>
+                        <ul>
+                            <li>Preprocessing: $O(P L k T_{hash})$.</li>
+                            <li>Query: Aims for sub-linear $O(P^\rho)$, $\rho < 1$. Depends on candidates retrieved.</li>
+                            <li>Space: Can be high, $O(P L + P M)$, if many tables ($L$) are used.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Suitability:</strong> Good for high dimensions as performance depends less critically on M.</li>
+                    <li><strong>Limitations:</strong> Sensitive to parameter tuning ($L, k, w$). High memory for high recall. Can return false positives.</li>
+                </ul>
+            </div>
+
+            <div class="accordion-header"><span>5.3 Graph-Based Methods (NSW, HNSW)</span><span class="arrow">&#9662;</span></div>
+            <div class="accordion-content">
+                <p>Construct a graph where nodes are data points and edges connect similar points. Search involves traversing the graph.</p>
+                <h4>Navigable Small World (NSW) Graphs</h4>
+                <ul>
+                    <li><strong>Concept:</strong> Graph with short and long-range connections for efficient navigation.</li>
+                    <li><strong>Search:</strong> Greedy traversal from an entry point, moving to the neighbor closest to the query until a local minimum.</li>
+                    <li><strong>Limitations:</strong> Can get trapped in local optima. Search complexity often polylogarithmic.</li>
+                </ul>
+                <h4>Hierarchical Navigable Small World (HNSW)</h4>
+                <ul>
+                    <li><strong>Structure:</strong> Multi-layered graph. Bottom layer (0) is dense with all points. Upper layers are sparser subsets, providing long-range "shortcuts".</li>
+                    <li><strong>Construction:</strong> Incremental. New points assigned a max layer, connected to neighbors found by searching from top down. Heuristics for diverse connections. Build: $O(P \log P)$ (approx, depends on params).</li>
+                    <li><strong>Search:</strong> Greedy search from top layer entry, descending layer by layer. Final thorough search in layer 0. Parameters `efConstruction` (build) and `efSearch` (query) control effort/quality.</li>
+                    <li><strong>Performance:</strong>
+                        <ul>
+                            <li>Query: Avg $O(\log P)$, excellent speed/recall.</li>
+                            <li>Build: Can be resource-intensive.</li>
+                            <li>Memory: Significant due to multi-layer graph.</li>
+                            <li>Recall: State-of-the-art for many ANN tasks. Supports dynamic updates.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Note:</strong> Hierarchy benefit might diminish in very high M ($>32$) due to "hubness".</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="comparison" class="content-section">
+            <h2>6. Comparative Analysis and Recommendations</h2>
+            <p>Choosing an algorithm depends on dataset size (P), dimensionality (M), accuracy needs, latency, indexing time, memory, and data dynamism.</p>
+
+            <h3>6.1. Performance Trade-offs Summary (Highlights)</h3>
+            <ul>
+                <li><strong>Brute Force:</strong> 100% accuracy, simple. Very slow $O(PM)$ query.</li>
+                <li><strong>k-d/Ball Trees:</strong> Fast build/query $O(M \log P)$ for low M. Degrade in high M.</li>
+                <li><strong>LSH:</strong> Good for high M. Sub-linear query. Tuning/memory can be challenging.</li>
+                <li><strong>HNSW:</strong> State-of-the-art speed/recall for high M. $O(\log P)$ query. Dynamic. High memory/build time.</li>
+            </ul>
+            
+            <h4>Table 6.1: Comparison of Nearest Neighbor Search Algorithms</h4>
+            <p>Click on table headers to sort (conceptual - sorting not implemented in this static example for brevity, but data is from report Table 8.1).</p>
+            <div class="overflow-x-auto">
+                <table id="algorithmComparisonTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="algorithm">Algorithm</th>
+                            <th data-sort="type">Type</th>
+                            <th data-sort="buildTime">Build Time Complexity</th>
+                            <th data-sort="queryTime">Query Time Complexity (Avg)</th>
+                            <th data-sort="space">Space Complexity</th>
+                            <th data-sort="scaleP">Scalability (P)</th>
+                            <th data-sort="scaleM">Scalability (M)</th>
+                            <th data-sort="accuracy">Accuracy/Recall</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Brute-Force</td><td>Exact</td><td>O(1)</td><td>O(P M)</td><td>O(P M)</td><td>Poor</td><td>Poor</td><td>100%</td></tr>
+                        <tr><td>k-d Tree</td><td>Exact/Approx</td><td>O(M P log P)</td><td>O(M log P) (low M)</td><td>O(P M)</td><td>Good</td><td>Poor</td><td>High/Tunable</td></tr>
+                        <tr><td>Ball Tree</td><td>Exact/Approx</td><td>O(M P log P)</td><td>O(M log P)</td><td>O(P M)</td><td>Good</td><td>Moderate</td><td>High/Tunable</td></tr>
+                        <tr><td>LSH</td><td>Approx</td><td>Moderate/High</td><td>O(P<sup>&rho;</sup>), &rho;&lt;1 (tunable)</td><td>O(P L + P M)</td><td>Good</td><td>Good</td><td>Tunable</td></tr>
+                        <tr><td>HNSW</td><td>Approx</td><td>High</td><td>O(log P) (tunable)</td><td>High O(P M &times; layers)</td><td>Excellent</td><td>Good</td><td>Very High/Tunable</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>6.2. Interactive Algorithm Recommendation</h3>
+            <p>Select your scenario's characteristics to get a general recommendation based on the report's insights (Section 8.4). This is a simplified guide.</p>
+            <div class="bg-white p-6 rounded-lg shadow mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label for="recDatasetSize" class="block text-sm font-medium text-gray-700 mb-1">Dataset Size (P):</label>
+                        <select id="recDatasetSize">
+                            <option value="small">Small</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="large">Large</option>
+                            <option value="very_large">Very Large (Billions)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recDimensionality" class="block text-sm font-medium text-gray-700 mb-1">Dimensionality (M):</label>
+                        <select id="recDimensionality">
+                            <option value="low">Low (M &lt; 20)</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="high">High</option>
+                            <option value="very_high">Very High</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recAccuracy" class="block text-sm font-medium text-gray-700 mb-1">Accuracy Need:</label>
+                        <select id="recAccuracy">
+                            <option value="paramount">Paramount (Exact)</option>
+                            <option value="high">High Recall</option>
+                            <option value="moderate">Moderate Recall</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recLatency" class="block text-sm font-medium text-gray-700 mb-1">Latency Criticality:</label>
+                        <select id="recLatency">
+                            <option value="critical">Critical (Real-time)</option>
+                            <option value="important">Important</option>
+                            <option value="flexible">Flexible</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recMemory" class="block text-sm font-medium text-gray-700 mb-1">Memory Constraints:</label>
+                        <select id="recMemory">
+                            <option value="unlimited">Ample</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="limited">Limited</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="recUpdates" class="block text-sm font-medium text-gray-700 mb-1">Data Dynamism (Updates):</label>
+                        <select id="recUpdates">
+                            <option value="static">Static</option>
+                            <option value="frequent">Frequent Updates</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="getRecommendationButton" class="recommendation-button">Get Recommendation</button>
+                <div id="recommendationOutput" class="recommendation-output" style="display: none;"></div>
+            </div>
+        </section>
+
+        <section id="libraries" class="content-section">
+            <h2>7. Libraries and Implementations</h2>
+            <p>Practical NNS relies on optimized libraries. `ann-benchmarks.com` offers empirical comparisons.</p>
+            
+            <h4>Table 7.1: Overview of Selected ANN Libraries</h4>
+            <p>Click on table headers to sort (conceptual - sorting not implemented in this static example for brevity, but data is from report Table 9.1).</p>
+            <div class="overflow-x-auto">
+                <table id="libraryTable">
+                    <thead>
+                        <tr>
+                            <th data-sort="library">Library</th>
+                            <th data-sort="developer">Developer/Origin</th>
+                            <th data-sort="algorithms">Key Algorithms</th>
+                            <th data-sort="bindings">Bindings</th>
+                            <th data-sort="features">Key Features</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Scikit-learn</td><td>Community</td><td>Brute, KDTree, BallTree</td><td>Python</td><td>General ML, Ease of use</td></tr>
+                        <tr><td>Faiss</td><td>Meta AI</td><td>Flat, IVF, HNSW, PQ, SQ, LSH</td><td>C++, Python</td><td>GPU, Quantization, Billion-scale</td></tr>
+                        <tr><td>NMSLIB</td><td>Community</td><td>HNSW, SW-graph, VP-tree</td><td>C++, Python</td><td>Non-metric, High perf. HNSW</td></tr>
+                        <tr><td>HNSWlib</td><td>Community</td><td>HNSW</td><td>C++, Python</td><td>Header-only C++, Lightweight HNSW</td></tr>
+                        <tr><td>Annoy</td><td>Spotify</td><td>Random Projection Trees</td><td>C++, Python</td><td>Memory mapping, Shared index</td></tr>
+                        <tr><td>ScaNN</td><td>Google Research</td><td>Partitioning, Anisotropic Quant.</td><td>C++, Python, TF</td><td>Optimized MIPS/Cosine, TF int.</td></tr>
+                        <tr><td>pgvector</td><td>Community</td><td>IVFflat, HNSW (in PostgreSQL)</td><td>SQL (Ext.)</td><td>Vector search in PostgreSQL</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>Trends: Graph-based methods (HNSW) often lead in performance. Quantization (PQ, SQ) is key for scale/memory. Specialized vector databases are also emerging.</p>
+        </section>
+
+        <section id="conclusion" class="content-section">
+            <h2>8. Conclusion</h2>
+            <p>This exploration covered finding N related vectors, from metrics to exact and approximate algorithms, and practical libraries.</p>
+            <h3>8.1. Key Takeaways</h3>
+            <ul>
+                <li>Metric choice (Euclidean vs. Cosine) is crucial.</li>
+                <li>Exact search (brute-force) is limited for large/high-D data.</li>
+                <li>ANN is necessary for scale, trading accuracy for speed.</li>
+                <li>Algorithm choice is context-dependent:
+                    <ul>
+                        <li>Trees (k-d, Ball): Good for low-D.</li>
+                        <li>LSH: Theoretical guarantees, good high-D scaling, tuning needed.</li>
+                        <li>Graph (HNSW): Often state-of-the-art for speed/recall, dynamic.</li>
+                    </ul>
+                </li>
+                <li>Libraries (Faiss, NMSLIB, etc.) provide practical solutions.</li>
+            </ul>
+            <h3>8.2. Future Directions</h3>
+            <p>Active research includes improved quantization, dynamic indexing, distributed ANN, hardware acceleration, and filtered ANN search.</p>
+            <h3>8.3. Final Thoughts</h3>
+            <p>Selecting the "best" NNS method requires understanding algorithms, complexities, and application constraints (data size/D, accuracy, latency, memory, dynamism). Empirical evaluation is key. The accuracy-efficiency trade-off is fundamental to ANN.</p>
+        </section>
+    </main>
+
+    <footer class="text-center p-4 text-sm text-neutral-600 border-t border-stone-300 mt-12">
+        Interactive Report SPA. Content derived from "Finding N Related Vectors" research document.
+    </footer>
+
+<script>
+    const navLinks = document.querySelectorAll('.nav-link');
+    const contentSections = document.querySelectorAll('.content-section');
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    function updateActiveNav(hash) {
+        navLinks.forEach(link => {
+            if (link.getAttribute('href') === hash) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+    }
+
+    function showSection(hash) {
+        contentSections.forEach(section => {
+            if ('#' + section.id === hash) {
+                section.classList.add('active');
+            } else {
+                section.classList.remove('active');
+            }
+        });
+        updateActiveNav(hash);
+        window.scrollTo(0, 0);
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href');
+            showSection(targetId); // Directly show the section
+            // Removed window.location.hash = targetId; to prevent security errors in sandboxed environments
+            if (mobileMenu.classList.contains('block')) {
+                mobileMenu.classList.remove('block');
+                mobileMenu.classList.add('hidden');
+            }
+        });
+    });
+    
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+        mobileMenu.classList.toggle('block');
+    });
+
+    // Removed hashchange event listener as primary navigation is now direct
+    // window.addEventListener('hashchange', () => {
+    //     const hash = window.location.hash || '#introduction';
+    //     showSection(hash);
+    // });
+
+    // Initial load - this still attempts to read the hash, which is fine.
+    const initialHash = window.location.hash || '#introduction';
+    showSection(initialHash);
+
+    // Accordion
+    const accordionHeaders = document.querySelectorAll('.accordion-header');
+    accordionHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.arrow');
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+            arrow.innerHTML = content.style.display === 'block' ? '&#9652;' : '&#9662;';
+        });
+    });
+
+    // Tabs for Metrics
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const tabId = button.dataset.tab;
+
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            tabContents.forEach(content => {
+                if (content.id === tabId + '-content') {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        });
+    });
+    
+    // Sortable Tables (Conceptual - full implementation is more involved)
+    function makeTableSortable(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const headers = table.querySelectorAll('th[data-sort]');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                // In a real app, you'd implement sorting logic here.
+                // For this example, it's just a placeholder.
+                // console.log(`Sorting by ${header.dataset.sort}`);
+            });
+        });
+    }
+    makeTableSortable('algorithmComparisonTable');
+    makeTableSortable('libraryTable');
+
+    // Recommendation Logic
+    const getRecommendationButton = document.getElementById('getRecommendationButton');
+    const recommendationOutput = document.getElementById('recommendationOutput');
+
+    getRecommendationButton.addEventListener('click', () => {
+        const datasetSize = document.getElementById('recDatasetSize').value;
+        const dimensionality = document.getElementById('recDimensionality').value;
+        const accuracy = document.getElementById('recAccuracy').value;
+        const latency = document.getElementById('recLatency').value;
+        const memory = document.getElementById('recMemory').value;
+        const updates = document.getElementById('recUpdates').value;
+
+        let recommendation = "Based on your selections: ";
+
+        if (accuracy === "paramount") {
+            recommendation += "<strong>Exact Brute-Force</strong> if P & M are small/manageable. Otherwise, consider <strong>HNSW with high `efSearch`</strong> or <strong>Ball Trees</strong> (if metric allows).";
+        } else if (dimensionality === "low") {
+            if (datasetSize === "small" || datasetSize === "moderate") {
+                recommendation += "<strong>Brute-force</strong>, <strong>k-d trees</strong>, or <strong>Ball trees</strong> are good choices.";
+            } else {
+                recommendation += "<strong>k-d trees</strong> or <strong>Ball trees</strong> for fast exact or approximate search.";
+            }
+        } else { // Higher dimensionality
+            if (updates === "frequent") {
+                recommendation += "<strong>HNSW</strong> is highly recommended due to its support for dynamic updates and excellent performance.";
+            } else if (latency === "critical" && (datasetSize === "large" || datasetSize === "very_large")) {
+                 recommendation += "<strong>HNSW</strong> (tuned for speed) or <strong>LSH</strong> (if memory is a concern and slightly lower recall is okay). For very large scale, consider <strong>Faiss/ScaNN with quantization</strong>.";
+            } else if (memory === "limited") {
+                recommendation += "<strong>LSH</strong> can be more memory-efficient than HNSW. Consider <strong>Annoy</strong> for memory mapping or libraries with quantization (e.g., <strong>Faiss</strong>).";
+            } else if (datasetSize === "very_large") {
+                 recommendation += "<strong>HNSW with quantization (e.g., in Faiss or ScaNN)</strong> is crucial. <strong>LSH</strong> might scale if high recall isn't top priority.";
+            }
+             else { // General high-D, moderate P, or less strict constraints
+                recommendation += "<strong>HNSW</strong> is generally the preferred algorithm for high recall and speed. <strong>LSH</strong> is an alternative if memory is a strong constraint or build time for HNSW is too high.";
+            }
+        }
+        
+        if (recommendation === "Based on your selections: ") {
+            recommendation = "Please make selections to see a recommendation. The report provides detailed guidance in Section 8.4."
+        } else {
+             recommendation += "<br><br><em>This is a simplified guide. Refer to the full report text (Section 8.4) for detailed considerations and always benchmark for your specific use case.</em>";
+        }
+
+        recommendationOutput.innerHTML = recommendation;
+        recommendationOutput.style.display = 'block';
+    });
+
+    // Complexity Chart
+    const ctx = document.getElementById('complexityChart').getContext('2d');
+    const complexityChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['10', '100', '1k', '10k', '100k', '1M'], // P (Number of points)
+            datasets: [{
+                label: 'O(P M) / O(P log P) (Brute-Force/Sorting)',
+                data: [100, 1000, 10000, 100000, 1000000, 10000000], // Simplified P or P log P
+                borderColor: 'rgb(239, 68, 68)',
+                tension: 0.1,
+                hidden: false 
+            }, {
+                label: 'O(M log P) / O(log P) (Tree/Graph ANN)',
+                data: [30, 60, 90, 120, 150, 180], // Simplified log P
+                borderColor: 'rgb(34, 197, 94)',
+                tension: 0.1
+            }, {
+                label: 'O(P^rho) (LSH ANN)', // rho typically < 1
+                data: [8, 30, 100, 300, 1000, 3000], // Simplified P^0.7 or similar
+                borderColor: 'rgb(59, 130, 246)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    type: 'logarithmic',
+                    title: {
+                        display: true,
+                        text: 'Relative Query Time (Log Scale)'
+                    }
+                },
+                x: {
+                     title: {
+                        display: true,
+                        text: 'Dataset Size P (Number of Points)'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Conceptual Query Time Complexity Scaling'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            // This is illustrative, not precise values
+                            label += `Relative time for P=${context.label}`;
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+
+</script>
+</body>
+</html>

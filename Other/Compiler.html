@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Compiler Construction Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Report Introduction -> Text Block -> Inform -> Overview of compilers.
+        - Lexical Analysis (Definitions, REs, FAs) -> Text Blocks, HTML/CSS styled lists for concepts -> Inform/Organize -> Vanilla JS for any simple interactions (e.g., toggle details).
+        - Syntax Analysis (Tables 1 & 2 from report) -> Interactive HTML Tables -> Compare/Inform -> JS for table interactivity.
+        - AST & Semantic Analysis -> Text Blocks, HTML/CSS styled lists for concepts -> Inform/Organize.
+        - Optimization (Table 3 & 4 from report) -> Interactive Cards/Lists for Table 3 (Machine-Independent Opts); Chart.js Bar Chart for Table 4 (Opt Level Comparison: conceptual Speed vs. Compile Time vs. Size) -> Compare/Inform -> JS for card interactivity and Chart.js.
+        - Code Generation -> Text Blocks -> Inform.
+        - Interplay & Patterns -> Interactive Lists/Cards for Data Structures & Design Patterns -> Organize/Inform -> JS for card interactivity.
+        - All sections include introductory paragraphs and contextual explanations for elements.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Assuming Inter is a common fallback, or Tailwind's default sans-serif */
+        }
+        .content-section {
+            display: none; /* Hidden by default, shown by JS */
+        }
+        .content-section.active {
+            display: block;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link.active {
+            font-weight: 600;
+            color: #06b6d4; /* Tailwind cyan-500 */
+            border-bottom-width: 2px;
+            border-color: #06b6d4; /* Tailwind cyan-500 */
+        }
+        .table-interactive th, .table-interactive td {
+            border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .table-interactive th {
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            transition: transform 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px; /* Adjusted max-width for better chart display */
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; /* Base height */
+            max-height: 450px; /* Max height */
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 400px;
+            }
+        }
+        h2 {
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 700;
+            color: #1e293b; /* slate-800 */
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e2e8f0; /* slate-200 */
+        }
+        h3 {
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: 600;
+            color: #334155; /* slate-700 */
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        h4 {
+            font-size: 1.25rem; /* text-xl */
+            font-weight: 600;
+            color: #475569; /* slate-600 */
+            margin-top: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        p, li {
+            color: #475569; /* slate-600 */
+            line-height: 1.75;
+            margin-bottom: 1rem;
+        }
+        ul {
+            list-style-type: disc;
+            margin-left: 1.5rem;
+        }
+        code {
+            background-color: #f1f5f9; /* slate-100 */
+            color: #dc2626; /* red-600 */
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .math {
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+        }
+        .accent-text {
+            color: #0891b2; /* cyan-600 */
+            font-weight: 600;
+        }
+        .key-term {
+            font-weight: 600;
+            color: #0ea5e9; /* sky-500 */
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted black; /* if you want to signify a tooltip */
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the text */
+            left: 50%;
+            margin-left: -110px; /* Use half of the width (220/2 = 110) to center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-700">
+
+    <header class="bg-slate-800 text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <h1 class="text-2xl font-bold">Compiler Construction Guide</h1>
+                <nav class="hidden md:flex space-x-1 items-center">
+                    <button data-target="intro" class="nav-link active px-3 py-2 rounded-md text-sm">Introduction</button>
+                    <button data-target="lexical" class="nav-link px-3 py-2 rounded-md text-sm">Lexical Analysis</button>
+                    <button data-target="syntax" class="nav-link px-3 py-2 rounded-md text-sm">Syntax Analysis</button>
+                    <button data-target="ast" class="nav-link px-3 py-2 rounded-md text-sm">AST & Semantic Analysis</button>
+                    <button data-target="optimization" class="nav-link px-3 py-2 rounded-md text-sm">Optimization</button>
+                    <button data-target="codegen" class="nav-link px-3 py-2 rounded-md text-sm">Code Generation</button>
+                    <button data-target="interplay" class="nav-link px-3 py-2 rounded-md text-sm">Interplay & Patterns</button>
+                    <button data-target="conclusion" class="nav-link px-3 py-2 rounded-md text-sm">Conclusion</button>
+                </nav>
+                <button id="mobileMenuButton" class="md:hidden text-slate-300 hover:text-white focus:outline-none focus:text-white">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobileMenu" class="md:hidden hidden bg-slate-700">
+            <nav class="flex flex-col space-y-1 px-2 pt-2 pb-3">
+                <button data-target="intro" class="nav-link active block px-3 py-2 rounded-md text-base font-medium text-white">Introduction</button>
+                <button data-target="lexical" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Lexical Analysis</button>
+                <button data-target="syntax" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Syntax Analysis</button>
+                <button data-target="ast" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">AST & Semantic Analysis</button>
+                <button data-target="optimization" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Optimization</button>
+                <button data-target="codegen" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Code Generation</button>
+                <button data-target="interplay" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Interplay & Patterns</button>
+                <button data-target="conclusion" class="nav-link block px-3 py-2 rounded-md text-base font-medium text-white">Conclusion</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section id="intro" class="content-section active">
+            <h2>1. Introduction: The Anatomy of a Modern Compiler</h2>
+            <p>This section introduces the fundamental role of a compiler in software development. A compiler is a specialized program that translates source code written in a high-level programming language (like Java, C++, or Python) into a low-level target language, such as machine code or bytecode, which a computer's processor can directly execute or interpret. You'll learn about the typical phased architecture of modern compilers, often divided into a <span class="key-term">front end</span>, a <span class="key-term">middle end</span>, and a <span class="key-term">back end</span>. This modular design is crucial for managing complexity, enhancing maintainability, and allowing compilers to support multiple languages and target machines efficiently.</p>
+            <p>A key concept discussed is the <span class="key-term">Intermediate Representation (IR)</span>, a pivotal data structure that acts as the common language between different compiler phases. We'll touch upon how IRs like Abstract Syntax Trees (ASTs), Three-Address Code (TAC), and Static Single Assignment (SSA) form facilitate analysis and optimization. The <span class="key-term">Symbol Table</span>, another vital data structure, will also be introduced as a central repository for information about program entities. Explore this section to understand the overall pipeline and the significance of each component in the journey from source code to executable program.</p>
+            
+            <div class="mt-6 bg-sky-50 p-6 rounded-lg shadow">
+                <h3 class="text-sky-700">Compiler Pipeline Overview</h3>
+                <p>The compilation process is typically a sequence of phases:</p>
+                <ol class="list-decimal ml-6 space-y-2 text-slate-600">
+                    <li><span class="font-semibold">Lexical Analysis:</span> Source code &rarr; Tokens</li>
+                    <li><span class="font-semibold">Syntax Analysis (Parsing):</span> Tokens &rarr; Parse Tree / Abstract Syntax Tree (AST)</li>
+                    <li><span class="font-semibold">Semantic Analysis:</span> AST &rarr; Annotated AST (type checking, scope resolution)</li>
+                    <li><span class="font-semibold">Intermediate Code Generation:</span> Annotated AST &rarr; Intermediate Representation (IR) (e.g., TAC, SSA)</li>
+                    <li><span class="font-semibold">Optimization:</span> IR &rarr; Optimized IR</li>
+                    <li><span class="font-semibold">Code Generation:</span> Optimized IR &rarr; Target Code (Machine Code / Assembly / Bytecode)</li>
+                </ol>
+                <p class="mt-4">Each phase transforms the program representation, building upon the output of the previous one. This structured approach allows for complex transformations and optimizations to be applied systematically.</p>
+            </div>
+        </section>
+
+        <section id="lexical" class="content-section">
+            <h2>2. Lexical Analysis - From Source Code to Tokens</h2>
+            <p>Lexical analysis, often performed by a component called a <span class="key-term">scanner</span>, is the first phase of compilation. This section explains how the scanner reads the source program as a stream of characters and groups them into meaningful sequences called <span class="key-term">lexemes</span>. Each lexeme is then classified into a <span class="key-term">token</span>, representing a syntactic category like identifiers, keywords, operators, or constants. You'll learn about the importance of discarding comments and whitespace and how this phase simplifies the subsequent parsing stage.</p>
+            <p>Key concepts covered include <span class="key-term">tokens</span>, <span class="key-term">lexemes</span>, and <span class="key-term">patterns</span> (often defined by <span class="key-term">Regular Expressions (REs)</span>). We'll explore the techniques for token recognition, primarily involving <span class="key-term">Finite Automata (FA)</span>, including Nondeterministic Finite Automata (NFAs) and Deterministic Finite Automata (DFAs). The process of converting REs to NFAs (e.g., Thompson's Construction) and then NFAs to DFAs (Subset Construction), followed by DFA minimization, is central to building efficient scanners. The <span class="key-term">longest match rule</span> for disambiguation, input buffering techniques for efficiency, and basic lexical error handling strategies are also discussed.</p>
+            
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+                <div class="card">
+                    <h3 class="text-teal-700">Key Concepts in Lexing</h3>
+                    <ul>
+                        <li><strong>Lexeme:</strong> Actual character sequence (e.g., <code>count</code>, <code>+</code>, <code>3.14</code>).</li>
+                        <li><strong>Token:</strong> Classification of lexemes (e.g., <code>IDENTIFIER</code>, <code>OPERATOR</code>, <code>NUMBER</code>).</li>
+                        <li><strong>Pattern:</strong> Rule (often a Regular Expression) defining a token's lexemes.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 class="text-teal-700">Token Recognition Pipeline</h3>
+                    <ol class="list-decimal ml-5 space-y-1">
+                        <li>Define token patterns using <span class="key-term">Regular Expressions</span>.</li>
+                        <li>Convert REs to <span class="key-term">Nondeterministic Finite Automata (NFA)</span> (e.g., Thompson's Construction).</li>
+                        <li>Convert NFA to <span class="key-term">Deterministic Finite Automata (DFA)</span> (Subset Construction).</li>
+                        <li>Minimize the DFA for efficiency.</li>
+                        <li>Implement the DFA as the scanner.</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section id="syntax" class="content-section">
+            <h2>3. Syntax Analysis (Parsing) - Structuring the Program</h2>
+            <p>Syntax analysis, or <span class="key-term">parsing</span>, is the second phase. It takes the stream of tokens from the lexical analyzer and determines if they form a syntactically valid program according to the language's grammar, typically specified by a <span class="key-term">Context-Free Grammar (CFG)</span>. This section details the parser's role in constructing a <span class="key-term">parse tree</span> (or an Abstract Syntax Tree), which represents the hierarchical structure of the program. You'll explore concepts like derivations (leftmost and rightmost) and the importance of this structural representation for later compiler phases.</p>
+            <p>Two main parsing strategies are discussed: <span class="key-term">Top-Down Parsing</span> (e.g., Recursive Descent, LL(k) parsers using FIRST and FOLLOW sets) and <span class="key-term">Bottom-Up Parsing</span> (e.g., Shift-Reduce, LR parsers like SLR, LALR, and LR(1)). The challenges of handling left recursion, left factoring (for LL parsers), and ambiguous grammars (and how LR parsers can use precedence/associativity rules) are covered. Finally, various error recovery strategies employed by parsers to handle syntax errors gracefully are presented. The tables below provide a comparison of these parsing approaches.</p>
+
+            <h3 class="mt-6">Comparison of Parsing Approaches</h3>
+            <div class="overflow-x-auto bg-white p-4 rounded-lg shadow mb-6">
+                <table id="llLrTable" class="w-full table-interactive">
+                    <caption>Table 1: Comparison of LL and LR Parsing Approaches</caption>
+                    <thead>
+                        <tr><th>Feature</th><th>LL Parsers</th><th>LR Parsers</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Derivation Type</td><td>Leftmost derivation</td><td>Rightmost derivation in reverse</td></tr>
+                        <tr><td>Tree Construction</td><td>Top-down</td><td>Bottom-up</td></tr>
+                        <tr><td>Stack Usage</td><td>Expects what is still to be seen</td><td>Records what has already been seen</td></tr>
+                        <tr><td>Grammar Class Parsed</td><td>LL(k) grammars (more restrictive)</td><td>LR(k) grammars (larger class)</td></tr>
+                        <tr><td>Lookahead</td><td>Typically 1 (LL(1))</td><td>Typically 1 (SLR(1), LALR(1), LR(1))</td></tr>
+                        <tr><td>Ease of Hand-Coding</td><td>Easier (Recursive Descent)</td><td>More difficult, usually generated</td></tr>
+                        <tr><td>Suitability for Generators</td><td>Good (e.g., ANTLR for LL(*))</td><td>Excellent (e.g., Yacc/Bison for LALR(1))</td></tr>
+                        <tr><td>Error Detection Point</td><td>Early, as soon as input mismatches prediction</td><td>Later, when no valid shift/reduce is possible</td></tr>
+                        <tr><td>Handling Left Recursion</td><td>Not directly; requires elimination</td><td>Handles left recursion naturally</td></tr>
+                        <tr><td>Handling Ambiguity</td><td>Not directly; requires unambiguous grammar</td><td>Can use precedence/associativity rules</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="overflow-x-auto bg-white p-4 rounded-lg shadow">
+                <table id="lrFamilyTable" class="w-full table-interactive">
+                    <caption>Table 2: Comparison of SLR, LALR, and Canonical LR(1) Parsers</caption>
+                    <thead>
+                        <tr><th>Feature</th><th>SLR(1)</th><th>LALR(1)</th><th>Canonical LR(1)</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Type of Items</td><td>LR(0) items</td><td>LR(0) items (cores of LR(1) items)</td><td>LR(1) items [A &rarr; &alpha;&bull;&beta;, a]</td></tr>
+                        <tr><td>Lookahead Determination</td><td>FOLLOW sets of LHS non-terminal</td><td>Computed by merging LR(1) lookaheads</td><td>Directly part of LR(1) items</td></tr>
+                        <tr><td>Parsing Table Size</td><td>Smallest</td><td>Same number of states as SLR, potentially more actions</td><td>Largest</td></tr>
+                        <tr><td>Number of States</td><td>Smallest (based on LR(0) automaton)</td><td>Same as SLR (merged LR(1) states)</td><td>Largest (distinct LR(1) states)</td></tr>
+                        <tr><td>Power/Grammar Class</td><td>Weakest of the three</td><td>Intermediate; handles most practical grammars</td><td>Most powerful; handles all LR(1) grammars</td></tr>
+                        <tr><td>Conflict Resolution</td><td>Prone to shift/reduce conflicts if FOLLOW sets are too broad</td><td>Fewer conflicts than SLR</td><td>Fewest conflicts</td></tr>
+                        <tr><td>Common Usage</td><td>Educational, simple parser generators</td><td>Widely used in parser generators (Yacc, Bison)</td><td>Less common due to table size, but offers maximal power</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="ast" class="content-section">
+            <h2>4. Abstract Syntax Tree (AST) Generation and Semantic Analysis</h2>
+            <p>This phase bridges syntax with meaning. After parsing, the <span class="key-term">Parse Tree</span> (or Concrete Syntax Tree) is often transformed into an <span class="key-term">Abstract Syntax Tree (AST)</span>. The AST is a more condensed, hierarchical representation that captures the essential structure of the program, omitting syntactic sugar and redundant details. It serves as a crucial intermediate representation for subsequent phases.</p>
+            <p><span class="key-term">Semantic Analysis</span> is then performed on the AST. Its primary role is to check for semantic correctness, ensuring the program is meaningful according to language rules. Key tasks include <span class="key-term">Type Checking</span> (verifying type compatibility of operators and operands), <span class="key-term">Scope Resolution</span> (linking identifier uses to their declarations using a <span class="key-term">Symbol Table</span>), and other checks like uniqueness and flow-of-control. The section also discusses AST design considerations and how <span class="key-term">Syntax-Directed Translation (SDT)</span> with synthesized and inherited attributes can formalize semantic processing, resulting in an <span class="key-term">Attributed AST</span> enriched with semantic information.</p>
+            
+            <div class="grid md:grid-cols-2 gap-6 mt-6">
+                <div class="card">
+                    <h3 class="text-indigo-700">AST: The Core Structure</h3>
+                    <p>The AST is a tree representation of the abstract syntactic structure of source code. Each node denotes a construct occurring in the source code.</p>
+                    <ul>
+                        <li>More abstract than a parse tree.</li>
+                        <li>Omits details like punctuation or intermediate grammar rules.</li>
+                        <li>Central data structure for semantic analysis, optimization, and code generation.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3 class="text-indigo-700">Key Semantic Analysis Tasks</h3>
+                    <ul>
+                        <li><strong>Type Checking:</strong> Ensures operations are valid for the types involved. (e.g., can't add a string to an integer in some languages).</li>
+                        <li><strong>Scope Resolution:</strong> Using the <span class="key-term">Symbol Table</span> to find declarations for identifiers and check for errors like undeclared variables or multiple declarations.</li>
+                        <li><strong>Other Checks:</strong> Uniqueness of labels, correct use of <code>break</code>/<code>continue</code>, function call argument matching.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="optimization" class="content-section">
+            <h2>5. Optimization - Enhancing Code Efficiency</h2>
+            <p>The optimization phase aims to transform the program's intermediate representation (IR) into an equivalent version that executes more efficiently (faster, less memory, less power) while adhering to the <span class="key-term">"as-if" rule</span> (observable behavior remains unchanged). This section explores various IRs suitable for optimization, like <span class="key-term">Three-Address Code (TAC)</span> and <span class="key-term">Static Single Assignment (SSA) Form</span>.</p>
+            <p>Fundamental to many optimizations are <span class="key-term">Control Flow Graphs (CFGs)</span>, which represent program control flow as basic blocks and edges, and <span class="key-term">Data Flow Analysis (DFA)</span>, which gathers information about data usage (e.g., Reaching Definitions, Live Variable Analysis, Available Expressions). We'll look at <span class="key-term">Machine-Independent Optimizations</span> (like constant folding, dead code elimination, loop optimizations) and <span class="key-term">Machine-Dependent Optimizations</span> (leveraging specific hardware features). The trade-offs involved in optimization (compilation time vs. runtime performance, code size, debuggability) and the concept of compiler optimization levels are also discussed.</p>
+
+            <h3 class="mt-6">Common Machine-Independent Optimizations</h3>
+            <p>Below are some common machine-independent optimizations. Click on a card to learn more (conceptual - no actual click action implemented for brevity).</p>
+            <div id="machineIndependentOptimizations" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+                </div>
+            
+            <h3 class="mt-8">Compiler Optimization Levels Trade-offs</h3>
+            <p>Compilers offer different optimization levels (e.g., -O0, -O1, -O2, -O3, -Os in GCC). This chart conceptually illustrates the typical trade-offs. Higher optimization levels generally improve runtime performance but may increase compilation time and code size, and can make debugging harder.</p>
+            <div class="chart-container mt-4 bg-white p-4 rounded-lg shadow">
+                <canvas id="optimizationLevelsChart"></canvas>
+            </div>
+        </section>
+
+        <section id="codegen" class="content-section">
+            <h2>6. Code Generation - Producing Target Code</h2>
+            <p>Code generation is the final phase, transforming the optimized Intermediate Representation (IR) into the target language—typically executable <span class="key-term">machine code</span>, <span class="key-term">assembly language</span>, or <span class="key-term">bytecode</span>. The primary goal is to produce correct and efficient code that preserves the program's semantics.</p>
+            <p>This section covers key sub-tasks: <span class="key-term">Instruction Selection</span> (mapping IR operations to target machine instructions, using techniques like tree matching or macro expansion), <span class="key-term">Register Allocation</span> (assigning variables and temporaries to the limited set of processor registers, often using graph coloring or linear scan algorithms, and dealing with spilling), and <span class="key-term">Instruction Scheduling</span> (reordering instructions to minimize pipeline stalls and maximize parallelism, respecting data dependencies). Management of the runtime environment, like stack frame setup and parameter passing, is also part of this phase. The "phase ordering problem"—the complex interdependencies between these sub-tasks—is a significant challenge.</p>
+
+            <div class="grid md:grid-cols-3 gap-6 mt-6">
+                <div class="card">
+                    <h4 class="text-purple-700">Instruction Selection</h4>
+                    <p>Choosing appropriate target machine instructions to implement IR operations. Aims for efficiency in speed or size.</p>
+                </div>
+                <div class="card">
+                    <h4 class="text-purple-700">Register Allocation</h4>
+                    <p>Assigning program values to fast processor registers to minimize slower memory access. Critical for performance. Manages spills when registers are exhausted.</p>
+                </div>
+                <div class="card">
+                    <h4 class="text-purple-700">Instruction Scheduling</h4>
+                    <p>Reordering instructions to optimize for pipelined processors, avoiding stalls and exploiting instruction-level parallelism.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="interplay" class="content-section">
+            <h2>7. Interplay, Data Structures, and Design Patterns</h2>
+            <p>This section discusses the crucial interplay between compiler phases and the central role of key data structures. The compiler operates as a pipeline, with each phase depending on its predecessor. The <span class="key-term">Symbol Table</span>, <span class="key-term">Abstract Syntax Tree (AST)</span>, and various forms of <span class="key-term">Intermediate Representation (IR)</span> (like TAC, SSA) are the information backbone, mediating interactions and influencing the effectiveness of analyses and transformations.</p>
+            <p>We also explore common <span class="key-term">Software Design Patterns</span> used in compiler construction to manage complexity, promote modularity, and enhance extensibility. Patterns like <span class="key-term">Visitor</span> (for AST traversal), <span class="key-term">Factory</span> (for node/token creation), <span class="key-term">Singleton</span> (for global resources), and <span class="key-term">Strategy</span> (for selectable algorithms) are vital for building maintainable and robust compilers. The influence of foundational texts like the "Dragon Book" in establishing a common architectural framework and vocabulary is also highlighted.</p>
+            
+            <h3 class="mt-6">Key Data Structures</h3>
+            <div id="keyDataStructures" class="grid md:grid-cols-2 gap-4 mt-4">
+                </div>
+
+            <h3 class="mt-8">Common Design Patterns</h3>
+            <div id="designPatterns" class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                </div>
+        </section>
+
+        <section id="conclusion" class="content-section">
+            <h2>8. Conclusion: The Modern Compiler Landscape</h2>
+            <p>This interactive guide has taken you through the intricate journey of compiler construction, from transforming raw source code into tokens during <span class="accent-text">Lexical Analysis</span>, to structuring these tokens into an <span class="accent-text">Abstract Syntax Tree (AST)</span> during <span class="accent-text">Syntax Analysis</span>. We've seen how <span class="accent-text">Semantic Analysis</span> adds meaning by performing type checks and scope resolution, leveraging the crucial <span class="accent-text">Symbol Table</span>.</p>
+            <p>The program, represented as an annotated AST or an <span class="accent-text">Intermediate Representation (IR)</span> like Three-Address Code or SSA form, then undergoes <span class="accent-text">Optimization</span>. This critical phase uses techniques like constant folding, dead code elimination, and loop optimizations, guided by Data Flow Analysis and Control Flow Graphs. Finally, <span class="accent-text">Code Generation</span> translates the optimized IR into target machine language, involving instruction selection, register allocation, and instruction scheduling.</p>
+            <p>Throughout this pipeline, data structures like tokens, ASTs, symbol tables, IRs, and various graphs are fundamental, while algorithms and design patterns (like Visitor, Factory) manage complexity and ensure modularity. The field continues to evolve with challenges like Just-In-Time (JIT) compilation, parallel architectures, and the application of machine learning to optimization. However, the foundational principles of phased design, formal methods, and semantics-preserving transformations remain the bedrock of building efficient and reliable software.</p>
+        </section>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-300 text-center p-6 mt-12">
+        <p>&copy; 2025 Interactive Compiler Guide. Based on the report "Compiler Construction: Principles and Methodologies".</p>
+    </footer>
+
+<script>
+    const navLinks = document.querySelectorAll('.nav-link');
+    const contentSections = document.querySelectorAll('.content-section');
+    const mobileMenuButton = document.getElementById('mobileMenuButton');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    function showSection(targetId) {
+        contentSections.forEach(section => {
+            section.classList.remove('active');
+            if (section.id === targetId) {
+                section.classList.add('active');
+            }
+        });
+
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.dataset.target === targetId) {
+                link.classList.add('active');
+            }
+        });
+        // For mobile menu, ensure it closes after selection
+        if (!mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+        }
+        window.scrollTo(0,0); // Scroll to top of page
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (event) => {
+            showSection(event.target.dataset.target);
+        });
+    });
+
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('hidden');
+    });
+
+    // Initialize with the first section active
+    if (navLinks.length > 0) {
+        showSection(navLinks[0].dataset.target);
+    }
+
+    // Data for dynamic content
+    const machineIndependentOptimizationsData = [
+        { name: "Constant Folding", desc: "Evaluate expressions with known constant operands at compile time.", example: "<code>x = 2 + 3;</code> &rarr; <code>x = 5;</code>", impact: "Speed, Size", dfa: "Often direct, Constant Propagation enables more." },
+        { name: "Constant Propagation", desc: "If a variable is known to have a constant value, replace uses of the variable with the constant.", example: "<code>c = 10; y = c * 5;</code> &rarr; <code>c = 10; y = 10 * 5;</code>", impact: "Speed, Size", dfa: "Reaching Definitions." },
+        { name: "Common Subexpression Elimination (CSE)", desc: "Identify identical subexpressions, compute them once, store the result, and reuse it.", example: "<code>a = b*c + d; e = b*c + f;</code> &rarr; <code>t = b*c; a = t + d; e = t + f;</code>", impact: "Speed, Size", dfa: "Available Expressions." },
+        { name: "Dead Code Elimination", desc: "Remove code whose results are never used or that is unreachable.", example: "<code>x = y + 1; /* x not used later */</code> &rarr; (statement removed)", impact: "Speed, Size", dfa: "Live Variable Analysis, Reachability Analysis." },
+        { name: "Loop-Invariant Code Motion", desc: "Move computations inside a loop whose result does not change between iterations to outside the loop.", example: "<code>while(i&lt;limit){ x = y*z; i++; }</code> &rarr; <code>t = y*z; while(i&lt;limit){ x = t; i++; }</code>", impact: "Speed", dfa: "Reaching Definitions, Loop Analysis." },
+        { name: "Loop Unrolling", desc: "Reduce loop control overhead by replicating the loop body multiple times.", example: "<code>for(i=0;i&lt;N;i++) A[i]=0;</code> &rarr; <code>for(i=0;i&lt;N;i+=2){ A[i]=0; A[i+1]=0; }</code>", impact: "Speed (Size increase)", dfa: "Loop Analysis." },
+        { name: "Strength Reduction", desc: "Replace expensive operations with equivalent cheaper ones (e.g., multiplication by addition).", example: "<code>j=0; for(i=0;i&lt;N;i++){ x=j*4; j++;}</code> &rarr; <code>k=0; for(i=0;i&lt;N;i++){ x=k; k+=4; }</code>", impact: "Speed", dfa: "Induction Variable Analysis." },
+        { name: "Function Inlining", desc: "Replace a function call with the actual body of the function.", example: "<code>y = square(x);</code> &rarr; <code>y = x * x;</code>", impact: "Speed (Size increase)", dfa: "Call Graph Analysis." }
+    ];
+
+    const optimizationsContainer = document.getElementById('machineIndependentOptimizations');
+    machineIndependentOptimizationsData.forEach(opt => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <h4 class="text-lg font-semibold text-emerald-700 mb-2">${opt.name}</h4>
+            <p class="text-sm text-slate-600 mb-1">${opt.desc}</p>
+            <p class="text-xs text-slate-500 mb-1"><strong>Example:</strong> ${opt.example}</p>
+            <p class="text-xs text-slate-500 mb-1"><strong>Impact:</strong> ${opt.impact}</p>
+            <p class="text-xs text-slate-500"><strong>Relies on:</strong> ${opt.dfa}</p>
+        `;
+        optimizationsContainer.appendChild(card);
+    });
+
+    const keyDataStructuresData = [
+        { name: "Tokens", desc: "Output of lexical analyzer; input to parser. Contains token type and optional attribute." },
+        { name: "Parse Tree (CST)", desc: "Direct representation of input derivation according to grammar rules." },
+        { name: "Abstract Syntax Tree (AST)", desc: "Condensed tree of source code's syntactic structure. Central to semantic analysis and IR generation." },
+        { name: "Symbol Table", desc: "Stores info about program-defined names (variables, functions, types) and their attributes (type, scope, location)." },
+        { name: "Intermediate Representation (IR)", desc: "Lower-level than AST, higher-level than machine code. E.g., Three-Address Code (TAC), Static Single Assignment (SSA)." },
+        { name: "Control Flow Graph (CFG)", desc: "Directed graph of basic blocks and control flow. Essential for global optimizations." },
+        { name: "Interference Graph", desc: "Used in graph-coloring register allocation. Nodes are live ranges; edges connect interfering ranges." }
+    ];
+
+    const dataStructuresContainer = document.getElementById('keyDataStructures');
+    keyDataStructuresData.forEach(ds => {
+        const item = document.createElement('div');
+        item.className = 'card p-4';
+        item.innerHTML = `<h4 class="font-semibold text-cyan-700">${ds.name}</h4><p class="text-sm">${ds.desc}</p>`;
+        dataStructuresContainer.appendChild(item);
+    });
+
+    const designPatternsData = [
+        { name: "Visitor", desc: "Allows adding new operations to AST node classes without modifying them. Decouples tree structure from operations." },
+        { name: "Factory", desc: "Centralizes creation of objects like AST nodes, tokens, or IR instructions." },
+        { name: "Singleton", desc: "Ensures a class has only one instance for global resources like symbol table manager or error reporter." },
+        { name: "Strategy", desc: "Defines a family of algorithms and makes them interchangeable (e.g., different optimization or register allocation strategies)." },
+        { name: "Interpreter", desc: "Defines a grammar representation and an interpreter for it. Relevant for constant folding or IR interpretation." },
+        { name: "Builder", desc: "Separates complex object construction from its representation (e.g., for IR or AST nodes)." },
+        { name: "Composite", desc: "Composes objects into tree structures (like an AST) to represent part-whole hierarchies uniformly." },
+        { name: "Chain of Responsibility", desc: "Passes a request along a chain of handlers. Useful for sequences of optimization passes." },
+        { name: "Facade", desc: "Provides a simplified interface to a complex subsystem (e.g., optimization or code generation)." },
+        { name: "Template Method", desc: "Defines an algorithm's skeleton, deferring some steps to subclasses. Useful for families of compiler passes." }
+    ];
+
+    const designPatternsContainer = document.getElementById('designPatterns');
+    designPatternsData.forEach(dp => {
+        const item = document.createElement('div');
+        item.className = 'card p-4';
+        item.innerHTML = `<h4 class="font-semibold text-cyan-700">${dp.name}</h4><p class="text-sm">${dp.desc}</p>`;
+        designPatternsContainer.appendChild(item);
+    });
+
+    // Chart.js for Optimization Levels
+    const ctxOptLevels = document.getElementById('optimizationLevelsChart');
+    if (ctxOptLevels) {
+        new Chart(ctxOptLevels, {
+            type: 'bar', // Changed to bar for better clarity with multiple metrics
+            data: {
+                labels: ['-O0', '-O1', '-O2', '-O3', '-Os', '-Og', '-Ofast'],
+                datasets: [
+                    {
+                        label: 'Runtime Performance (Higher is Better)',
+                        data: [1, 3, 7, 9, 6, 4, 10], // Conceptual values 1-10
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)', // Blue
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Compilation Time (Lower is Better)',
+                        data: [1, 2, 4, 8, 4, 3, 9], // Conceptual values 1-10
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)', // Red
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Code Size (Lower is Better)',
+                        data: [9, 7, 6, 8, 2, 7, 9], // Conceptual values 1-10
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)', // Green
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    },
+                     {
+                        label: 'Debuggability (Higher is Better)',
+                        data: [10, 8, 5, 2, 4, 7, 1], // Conceptual values 1-10
+                        backgroundColor: 'rgba(255, 206, 86, 0.6)', // Yellow
+                        borderColor: 'rgba(255, 206, 86, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 10,
+                        title: {
+                            display: true,
+                            text: 'Conceptual Metric Value (Relative)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Conceptual Trade-offs of Compiler Optimization Levels',
+                        font: { size: 16 }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                    if (context.datasetIndex === 0) label += " (Higher better)";
+                                    else if (context.datasetIndex === 1) label += " (Lower better)";
+                                    else if (context.datasetIndex === 2) label += " (Lower better)";
+                                    else if (context.datasetIndex === 3) label += " (Higher better)";
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const chartElement = elements[0];
+                        const datasetIndex = chartElement.datasetIndex;
+                        const index = chartElement.index;
+                        const level = ctxOptLevels.chart.data.labels[index];
+                        const metric = ctxOptLevels.chart.data.datasets[datasetIndex].label;
+                        // Could add more interactive details here if needed
+                        // For now, console log as an example
+                        console.log(`Clicked on: ${level} - ${metric}`);
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

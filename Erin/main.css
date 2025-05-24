@@ -1,0 +1,90 @@
+:root {
+    --light-bg: #24d893;
+    --bg: #0d9c65;
+    --dark-bg: #066b44;
+    --text-color: #fff;
+    --border-color: #db8a6b;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    background-image: linear-gradient(var(--bg), var(--dark-bg));
+}
+
+#hero {
+    background: url(./Hero.jpg) no-repeat center center;
+    background-size: cover;
+    margin: 0;
+    height: 400px;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    clip-path: path("M0 0V390c8-8 16-8 24 0s16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 16-8 24 0 16 8 24 0 V0Z");
+}
+
+#header {
+    mix-blend-mode: difference;
+    color: var(--text-color);
+    -webkit-text-stroke: 3px var(--light-bg);
+    padding: 0;
+    margin: 5px 0;
+    font-size: 100px;
+    text-align: center;
+    border-radius: 10px;
+}
+#subheader {
+    mix-blend-mode: difference;
+    color: var(--text-color);
+    -webkit-text-stroke: 1px var(--light-bg);
+    padding: 0;
+    margin: 5px 0;
+    font-size: 50px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+#contact {
+    color: var(--text-color);
+    float: right;
+    padding: 20px;
+    width: 20%;
+    margin-top: -20px;
+    margin-right: -5px;
+    background-color: var(--dark-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 5px;
+}
+
+.mail {
+    color: var(--light-bg);
+    text-decoration: none;
+}
+
+.mail:link {
+  text-decoration: none;
+}
+
+.mail:visited {
+  text-decoration: none;
+}
+
+.mail:hover {
+  text-decoration: underline;
+}
+
+.mail:active {
+  text-decoration: underline;
+}
+
+.footer-content {
+    color: var(--text-color);
+    padding: 20px;
+    margin-top: 20px;
+    background-color: var(--dark-bg);
+    text-align: center;
+
+   clear: both
+}

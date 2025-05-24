@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<!-- Visualization & Content Choices:
+    * **Salaries (All Roles):** Report Tables 1-5 -> Goal: Compare salary bands (Entry, Mid, Senior), and compare Academic vs. Industry for AI/ML, Employed vs. Freelance for Web Design, and Role-specific for Game Dev -> Viz: Chart.js Bar Charts (grouped where necessary) -> Interaction: Tooltips on hover, legends -> Justification: Clear visual comparison of salary progression and categories -> Library: Chart.js.
+    * **Degree Structures (e.g., Table 6-11):** Report Tables -> Goal: Inform about degree content by year/stage -> Presentation: Interactive HTML accordions for each year/stage, revealing modules/topics -> Interaction: Click to expand/collapse year details -> Justification: Manages dense information, allows progressive disclosure -> Method: HTML/CSS/JS.
+    * **Textual Content (Overviews, Day-in-Life, Suitability, Education Pathways):** Report Paragraphs -> Goal: Inform -> Presentation: Structured HTML text blocks with clear headings and Tailwind styling -> Interaction: Read, scroll. Navigation drives content display -> Justification: Standard readable format -> Method: HTML/CSS.
+    * **No SVG/Mermaid used.** All charts via Chart.js (Canvas). Diagrams (like degree structures) via structured HTML/CSS/JS.
+    -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Career and Degree Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .tab-button.active { background-color: #0284c7; color: #f0f9ff; }
+        .tab-button { transition: background-color 0.3s ease, color 0.3s ease; }
+        .accordion-content { display: none; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, padding 0.3s ease-out; }
+        .accordion-content.active { display: block; max-height: 1000px; padding-top: 0.5rem; padding-bottom: 0.5rem; }
+        .chart-container { position: relative; width: 100%; max-width: 700px; margin-left: auto; margin-right: auto; height: 350px; max-height: 450px; }
+        @media (min-width: 768px) { .chart-container { height: 400px; } }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        .main-nav-button.active { background-color: #0ea5e9; color: white; }
+        .sub-nav-button.active { background-color: #38bdf8; color: white; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <aside class="w-full md:w-72 bg-slate-800 text-slate-100 p-4 space-y-2 md:h-screen md:sticky md:top-0 overflow-y-auto">
+            <h1 class="text-2xl font-bold mb-6 text-sky-300">Tech Careers UK</h1>
+            <nav id="mainNav" class="space-y-1">
+                <button data-target="home" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Home</button>
+                <button data-target="software-engineer" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Software Engineer</button>
+                <button data-target="ai-ml-researcher" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">AI/ML Researcher</button>
+                <button data-target="hardware-engineer" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Computer Hardware Engineer</button>
+                <button data-target="web-designer" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Web Designer</button>
+                <button data-target="game-developer" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Game Developer</button>
+                <div>
+                    <button data-target="degrees-overview" class="main-nav-button w-full text-left px-4 py-2 rounded-md hover:bg-slate-700 transition-colors">Understanding Degrees</button>
+                    <div id="degreesNavGroup" class="ml-4 mt-1 space-y-1 hidden">
+                        <button data-target="degree-cs" class="sub-nav-button w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-slate-600 transition-colors">BSc/BEng Computer Science</button>
+                        <button data-target="degree-se" class="sub-nav-button w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-slate-600 transition-colors">BSc/BEng Software Engineering</button>
+                        <button data-target="degree-eee-cse" class="sub-nav-button w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-slate-600 transition-colors">BEng/MEng EEE / CSE</button>
+                        <button data-target="degree-web" class="sub-nav-button w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-slate-600 transition-colors">BA/BSc Web/Graphic/UX Design</button>
+                        <button data-target="degree-games" class="sub-nav-button w-full text-left px-3 py-1.5 text-sm rounded-md hover:bg-slate-600 transition-colors">BA/BSc Game Dev/Design/Art</button>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-6 md:p-10 overflow-y-auto">
+            <section id="home" class="content-section active">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-6">Navigating Your Path into Technology</h2>
+                <p class="mb-4 text-lg">Welcome to the Interactive Tech Career and Degree Explorer for the UK. This guide provides a detailed exploration of various prominent roles within the technology sector, outlining the educational pathways, career prospects, and day-to-day realities associated with each.</p>
+                <p class="mb-4">Use the navigation on the left to explore specific careers like Software Engineering, AI/ML Research, and more, or delve into the details of common degrees that pave the way into these exciting fields.</p>
+                <div class="mt-8 p-6 bg-sky-100 border border-sky-300 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-700 mb-3">How to Use This Explorer:</h3>
+                    <ul class="list-disc list-inside space-y-2 text-slate-700">
+                        <li>Select a <strong class="text-sky-600">Career Path</strong> from the main navigation to learn about specific roles.</li>
+                        <li>Within each career section, use the <strong class="text-sky-600">tabs</strong> (Overview, Salary, etc.) to find detailed information.</li>
+                        <li>Explore the <strong class="text-sky-600">'Understanding Degrees'</strong> section for insights into relevant academic programs.</li>
+                        <li>Click on degree names under 'Understanding Degrees' to see specific details like entry requirements and course content.</li>
+                        <li>Salary information is often presented in <strong class="text-sky-600">interactive charts</strong> – hover over chart elements for more details.</li>
+                        <li>Degree structures are presented in <strong class="text-sky-600">expandable accordions</strong> – click on a year/stage to see more.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="software-engineer" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">Software Engineer</h2>
+                <p class="text-slate-600 mb-6">Architects and builders of the digital world, applying engineering principles to software and computer systems.</p>
+                <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button software-engineer-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-overview">Overview</button>
+                        <button class="tab-button software-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-salary">Salary</button>
+                        <button class="tab-button software-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-day">A Day in the Life</button>
+                        <button class="tab-button software-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-suitability">Is This For You?</button>
+                        <button class="tab-button software-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-education">Education</button>
+                    </nav>
+                </div>
+                <div id="se-overview" class="tab-content active">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Role Overview</h3>
+                    <p class="mb-3">Software Engineers design, develop, maintain, test, and evaluate software and computer systems. This broad role covers specializations like applications development, systems programming, web development, and mobile development. Daily tasks involve analysing user requirements, writing and testing code (e.g., Java, Python, C++, C#, JavaScript), refining code, and researching new software programs. They also develop existing programs, integrate software products, and create technical specifications. Collaboration with analysts, architects, other programmers, and clients is key. The field requires continuous learning due to rapid technological evolution.</p>
+                    <p>The demand is robust, driven by increasing reliance on technology. It involves problem-solving, logical thinking, and creativity.</p>
+                </div>
+                <div id="se-salary" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Average Salary in the UK</h3>
+                    <p class="mb-4">Salaries vary by experience, location, industry, and skills. London and tech hubs may offer higher pay. Specialized skills (AI, cybersecurity) also command higher salaries.</p>
+                    <div class="chart-container mb-6"><canvas id="seSalaryChart"></canvas></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-slate-300 rounded-lg shadow">
+                            <thead class="bg-slate-100"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Experience Level</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Typical Annual Salary Range (£)</th></tr></thead>
+                            <tbody class="divide-y divide-slate-200"><tr><td class="px-6 py-4 whitespace-nowrap">Entry-Level/Graduate</td><td class="px-6 py-4 whitespace-nowrap">28,000 - 40,000</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Mid-Career</td><td class="px-6 py-4 whitespace-nowrap">40,000 - 60,000 (Average ~£48,723 - £57,492)</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Senior/Lead/Principal</td><td class="px-6 py-4 whitespace-nowrap">60,000 - 70,000+</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="se-day" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">A Day in the Life</h3>
+                    <p class="mb-3">A Software Engineer's day is dynamic and project-driven. It often starts with checking emails and a daily stand-up meeting to discuss progress and obstacles.</p>
+                    <p class="mb-3">The core of the day is "deep work": writing, testing, and debugging code for new features, bug fixes, or performance improvements. Code reviews and pair programming are common. Afternoons might include project meetings (sprint planning, design discussions) and documentation. The day may end with deploying code, monitoring applications, and planning for the next day. Continuous learning outside work hours is typical. Work is mainly office-based or remote, requiring high concentration.</p>
+                </div>
+                <div id="se-suitability" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Is This Role For You?</h3>
+                    <div class="grid md:grid-cols-2 gap-6"><div><h4 class="text-xl font-medium text-slate-700 mb-2">Interests:</h4><ul class="list-disc list-inside space-y-1"><li>Problem-Solving: Enjoying complex challenges and logical solutions.</li><li>Technology and Computing: Strong interest in computer systems and software.</li><li>Building and Creating: Desire to build tangible products.</li><li>Continuous Learning: Enthusiasm for new languages, tools, and methodologies.</li></ul></div><div><h4 class="text-xl font-medium text-slate-700 mb-2">Personality Traits:</h4><ul class="list-disc list-inside space-y-1"><li>Analytical and Critical Thinking</li><li>Attention to Detail</li><li>Curiosity and Open-Mindedness</li><li>Self-Motivation and Proactivity</li><li>Resilience and Ability to Work Under Pressure</li><li>Good Prioritization Skills</li><li>Teamwork and Interpersonal Skills</li><li>Humility and Willingness to Learn</li><li>Strong Sense of Responsibility</li></ul></div></div>
+                    <p class="mt-4">Suited for those who enjoy logical puzzles, mathematics, creative problem-solving, and are persistent and detail-oriented.</p>
+                </div>
+                <div id="se-education" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Educational Pathways & Typical Degrees</h3>
+                    <p class="mb-3">Several routes lead to a Software Engineer career:</p>
+                    <ol class="list-decimal list-inside space-y-2"><li><strong>University Degree:</strong> Most common. Relevant degrees: Computer Science, Software Engineering, Information Technology, Mathematics, Related degrees (e.g., FinTech, some engineering). Typically requires 2-3 A-levels (often including Maths).</li><li><strong>Higher National Diploma (HND) or Foundation Degree:</strong> Vocational, practical focus. Requires 1-2 A-levels.</li><li><strong>Apprenticeships:</strong> On-the-job training with study. E.g., Software Development Technician (L3), Software Developer (L4), Digital and Technology Solutions Professional (L6 Degree Apprenticeship).</li><li><strong>College Courses/Vocational Qualifications:</strong> E.g., T Levels in Digital Production, Design and Development.</li><li><strong>Graduate Training Schemes:</strong> Some IT companies offer these, computing background often advantageous.</li><li><strong>Self-Study and Bootcamps:</strong> Intensive coding bootcamps (e.g., 12 weeks). Strong portfolio is key.</li></ol>
+                    <p class="mt-3">A strong portfolio and demonstrable coding skills are crucial. Continuous learning and certifications are valued.</p>
+                </div>
+            </section>
+
+            <section id="ai-ml-researcher" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">AI/ML Researcher</h2>
+                <p class="text-slate-600 mb-6">Pioneers advancing artificial intelligence and machine learning through new algorithms and applications.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button ai-ml-researcher-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="aiml-overview">Overview</button>
+                        <button class="tab-button ai-ml-researcher-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="aiml-salary">Salary</button>
+                        <button class="tab-button ai-ml-researcher-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="aiml-day">A Day in the Life</button>
+                        <button class="tab-button ai-ml-researcher-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="aiml-suitability">Is This For You?</button>
+                        <button class="tab-button ai-ml-researcher-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="aiml-education">Education</button>
+                    </nav>
+                </div>
+                <div id="aiml-overview" class="tab-content active">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Role Overview</h3>
+                    <p class="mb-3">AI/ML Researchers develop new algorithms, improve existing models, and explore novel AI/ML applications. Roles exist in academia (fundamental research, publishing) and industry (applied solutions for products/services like NLP, computer vision, recommendation systems). They extract meaning from data, guide technical direction, and ensure research applicability. Common roles: AI Research Scientist, Machine Learning Engineer (research focus), Data Scientist (research-oriented), NLP Specialist. The field evolves rapidly, requiring constant learning. Ethical considerations are increasingly important. AI Engineers often apply existing research, while Researchers create new knowledge, though roles can overlap.</p>
+                </div>
+                <div id="aiml-salary" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Average Salary in the UK</h3>
+                    <p class="mb-4">Salaries are generally high, with a notable difference between academia and industry. Industry roles pay substantially more, especially for experienced professionals. Location (London) and specific expertise also influence pay.</p>
+                    <div class="chart-container mb-6"><canvas id="aimlSalaryChart"></canvas></div>
+                     <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-slate-300 rounded-lg shadow">
+                            <thead class="bg-slate-100"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Role/Level</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Academic Annual Salary (£)</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Industry Annual Salary (£)</th></tr></thead>
+                            <tbody class="divide-y divide-slate-200"><tr><td class="px-6 py-4 whitespace-nowrap">PhD Student (Stipend)</td><td class="px-6 py-4 whitespace-nowrap">20,780 - 22,780+ (tax-free)</td><td class="px-6 py-4 whitespace-nowrap">N/A</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Postdoctoral Researcher</td><td class="px-6 py-4 whitespace-nowrap">35,000 - 45,000</td><td class="px-6 py-4 whitespace-nowrap">50,000 - 80,000+ (Research Scientist)</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Junior/Early Career</td><td class="px-6 py-4 whitespace-nowrap">42,000 - 58,000 (Lecturer)</td><td class="px-6 py-4 whitespace-nowrap">45,000 - 90,000 (AI Engineer)</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Senior Researcher/Professor</td><td class="px-6 py-4 whitespace-nowrap">65,000 - 120,000+ (Professor)</td><td class="px-6 py-4 whitespace-nowrap">90,000 - 150,000+ (Senior ML/AI)</td></tr></tbody>
+                        </table>
+                        <p class="mt-2 text-sm text-slate-600">Note: Industry salaries for AI Research Scientists can range from £50k-£120k+, and ML Engineers from £42k-£150k+. The median for general AI jobs was ~£126k as of April 2025.</p>
+                    </div>
+                </div>
+                <div id="aiml-day" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">A Day in the Life</h3>
+                    <p class="mb-3">Activities differ between academia and industry but involve deep thinking, experimentation, and collaboration.</p>
+                    <ul class="list-disc list-inside space-y-3"><li><strong>Academic AI/ML Researcher:</strong> Mornings may involve reviewing papers, teaching, or meeting students/collaborators. Much of the day is dedicated to research: formulating hypotheses, designing experiments, coding (Python, TensorFlow, PyTorch), running simulations, analyzing results. Writing grant proposals and attending/presenting at conferences are also common. Work involves independent thought and perseverance.</li><li><strong>Industry AI/ML Researcher/Engineer:</strong> May start with team stand-ups. Tasks include data collection/cleaning, designing/training/evaluating ML models for business problems. Frequent collaboration with data engineers, software engineers, product managers. Documenting experiments and staying updated on AI innovations is vital. The environment can be fast-paced, focusing on tangible results.</li></ul>
+                     <p class="mt-3">A typical week is ~40 hours, but deadlines can lead to longer hours. Requires deep focus and analytical skills.</p>
+                </div>
+                <div id="aiml-suitability" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Is This Role For You?</h3>
+                     <div class="grid md:grid-cols-2 gap-6"><div><h4 class="text-xl font-medium text-slate-700 mb-2">Interests:</h4><ul class="list-disc list-inside space-y-1"><li>Deep interest in AI and learning systems.</li><li>Mathematics and Statistics (advanced levels).</li><li>Programming (Python, AI/ML frameworks).</li><li>Problem-Solving (challenging, ill-defined problems).</li><li>Research and Discovery (exploring unknown territories).</li><li>Data Analysis.</li></ul></div><div><h4 class="text-xl font-medium text-slate-700 mb-2">Personality Traits:</h4><ul class="list-disc list-inside space-y-1"><li>Analytical and Critical Thinking</li><li>Curiosity and Open-Mindedness</li><li>Persistence and Resilience</li><li>Attention to Detail</li><li>Creativity and Innovation</li><li>Strong Communication Skills</li><li>Collaboration and Teamwork</li><li>Ethical Awareness</li></ul></div></div>
+                    <p class="mt-4">Suited for intellectually driven individuals who enjoy abstract thinking, are comfortable with ambiguity, and motivated by knowledge and innovation.</p>
+                </div>
+                <div id="aiml-education" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Educational Pathways & Typical Degrees</h3>
+                    <p class="mb-3">Typically involves advanced education:</p>
+                    <ol class="list-decimal list-inside space-y-2"><li><strong>Undergraduate Degree:</strong> Essential foundation. Common degrees: Computer Science (often with AI/ML modules), Artificial Intelligence (specialized BSc), Mathematics or Statistics, Data Science, Engineering (Electrical, Software, etc. with strong computational/maths skills), Physics, Cognitive Science, Linguistics, Philosophy (with significant AI/ML supplementation).</li><li><strong>Postgraduate Degree (Master's - MSc):</strong> Often a minimum for research roles or a PhD stepping stone. MSc in Artificial Intelligence, Machine Learning, Data Science, Computer Science (AI/ML spec.), Robotics, AI & Ethics. Requires a good undergraduate degree (2:1 or first) and strong programming/maths skills.</li><li><strong>Doctoral Degree (PhD/DPhil):</strong> Generally essential for academic research and many senior/cutting-edge industry research roles. Involves 3-4 years of intensive research. UKRI Centres for Doctoral Training (CDTs) offer funded PhDs.</li></ol>
+                    <p class="mt-3">Continuous learning (online courses, certifications, projects, conferences) is crucial. A strong portfolio of research/projects is vital.</p>
+                </div>
+            </section>
+
+            <section id="hardware-engineer" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">Computer Hardware Engineer</h2>
+                <p class="text-slate-600 mb-6">Designers and developers of computer systems, components, and related physical equipment.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button hardware-engineer-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="hw-overview">Overview</button>
+                        <button class="tab-button hardware-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="hw-salary">Salary</button>
+                        <button class="tab-button hardware-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="hw-day">A Day in the Life</button>
+                        <button class="tab-button hardware-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="hw-suitability">Is This For You?</button>
+                        <button class="tab-button hardware-engineer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="hw-education">Education</button>
+                    </nav>
+                </div>
+                <div id="hw-overview" class="tab-content active">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Role Overview</h3>
+                    <p class="mb-3">Computer Hardware Engineers research, design, develop, test, and oversee the manufacture and installation of computer systems and components (circuit boards, processors, memory, routers, networks, peripherals). Their work applies to commercial, industrial, military, or scientific settings. They design prototypes, draft blueprints, test hardware, and update existing equipment. Collaboration with software developers, manufacturers, and clients is key. Documentation is important. The aim is often to make computers faster, more powerful, or efficient. Some design devices incorporating computers (e.g., in cars, medical equipment). Demands creativity and analytical thinking.</p>
+                </div>
+                <div id="hw-salary" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Average Salary in the UK</h3>
+                    <p class="mb-4">Salaries reflect specialized engineering expertise. Influenced by hardware complexity, industry, company size, and location. Some large tech companies may offer significantly higher compensation.</p>
+                    <div class="chart-container mb-6"><canvas id="hwSalaryChart"></canvas></div>
+                     <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-slate-300 rounded-lg shadow">
+                            <thead class="bg-slate-100"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Experience Level</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Typical Annual Salary Range (£)</th></tr></thead>
+                            <tbody class="divide-y divide-slate-200"><tr><td class="px-6 py-4 whitespace-nowrap">Entry-Level</td><td class="px-6 py-4 whitespace-nowrap">~35,000</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Mid-Career/Average</td><td class="px-6 py-4 whitespace-nowrap">45,000 - 53,000</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Senior/Experienced</td><td class="px-6 py-4 whitespace-nowrap">55,000 - 70,000+ (Potentially higher with specific companies/locations)</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="hw-day" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">A Day in the Life</h3>
+                    <p class="mb-3">A mix of independent work and collaboration, often in labs or offices. The day may start with reviewing project requirements and team discussions. A significant portion is spent on design and development using CAD software for schematics and blueprints. Ongoing research into new technologies is vital. Testing prototypes for functionality, performance, and compliance is critical, including troubleshooting. Frequent collaboration with software engineers, electrical engineers, manufacturers, and clients. Detailed documentation of designs, test results, and progress reports is key. Usually full-time, but overtime may be needed for deadlines. Continuous learning is essential.</p>
+                </div>
+                <div id="hw-suitability" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Is This Role For You?</h3>
+                    <div class="grid md:grid-cols-2 gap-6"><div><h4 class="text-xl font-medium text-slate-700 mb-2">Interests:</h4><ul class="list-disc list-inside space-y-1"><li>Computers and Electronics: Deep interest in physical components.</li><li>Engineering and Technology: Passion for designing, building, testing.</li><li>Mathematics and Physics: Aptitude for underlying scientific principles.</li><li>Problem-Solving: Enjoying complex technical challenges.</li><li>Product Development: Interest in the full product lifecycle.</li></ul></div><div><h4 class="text-xl font-medium text-slate-700 mb-2">Personality Traits:</h4><ul class="list-disc list-inside space-y-1"><li>Analytical Thinking</li><li>Attention to Detail</li><li>Innovation and Creativity</li><li>Problem-Solving Skills (methodical, logical)</li><li>Persistence and Determination</li><li>Cooperation and Teamwork</li><li>Initiative</li><li>Good Communication Skills</li></ul></div></div>
+                    <p class="mt-4">Rewarding for those who enjoy practical, hands-on work, are fascinated by technology's inner workings, and have strong analytical and problem-solving skills.</p>
+                </div>
+                <div id="hw-education" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Educational Pathways & Typical Degrees</h3>
+                    <p class="mb-3">A bachelor's degree in a relevant engineering field is typically minimum.</p>
+                    <ol class="list-decimal list-inside space-y-2"><li><strong>Primary Degree Routes:</strong> Computer Engineering / Computer Systems Engineering (combines EE and CS), Electrical Engineering / Electronic Engineering (strong foundation in circuits, electronics), Computer Science (with hardware focus, e.g., architecture, embedded systems), Physics or Mathematics (may need supplementary engineering/CS knowledge).</li><li><strong>Key Skills from Degrees:</strong> Understanding of computer architecture, digital systems, microprocessors, embedded systems. Knowledge of programming (C, C++, assembly), OS, HDLs (VHDL/Verilog). Proficiency in maths, physics, EE principles. Experience with CAD software, testing equipment.</li><li><strong>Further Education:</strong> Master's degree may be required for research or highly specialized design.</li><li><strong>Alternative Routes:</strong> Uncommon without a degree, but possible with substantial experience (e.g., technician route). Engineering apprenticeships with electronics/systems focus.</li></ol>
+                    <p class="mt-3">Highly technical field. Employers look for solid theory and practical skills. Continuous learning is essential.</p>
+                </div>
+            </section>
+
+            <section id="web-designer" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">Web Designer</h2>
+                <p class="text-slate-600 mb-6">Creative and technical professionals who design and redesign websites, focusing on aesthetics and functionality.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button web-designer-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-overview">Overview</button>
+                        <button class="tab-button web-designer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-salary">Salary</button>
+                        <button class="tab-button web-designer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-day">A Day in the Life</button>
+                        <button class="tab-button web-designer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-suitability">Is This For You?</button>
+                        <button class="tab-button web-designer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-education">Education</button>
+                    </nav>
+                </div>
+                <div id="web-overview" class="tab-content active">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Role Overview</h3>
+                    <p class="mb-3">Web Designers plan website structure, create page layouts, select colors, images, and typefaces, and ensure a positive user experience (UX). They work with clients to understand needs, translating them into design specifications. They use design software (Adobe Creative Suite), layout tools, and digital illustration tools. Some are involved in front-end development (HTML, CSS, JavaScript) or work with developers. Key responsibilities: defining project scope, creating wireframes/storyboards, designing visual imagery, using CMS, ensuring responsiveness and accessibility, testing designs, and staying updated on trends. Can overlap with web developer or UX/UI designer roles.</p>
+                </div>
+                <div id="web-salary" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Average Salary in the UK</h3>
+                    <p class="mb-4">Varies by experience, skills (coding, UX), location, and employment type (employed/freelance). London typically offers higher rates. Specific skills (UX/UI, e-commerce) influence earnings.</p>
+                    <div class="chart-container mb-6"><canvas id="webSalaryChart"></canvas></div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-slate-300 rounded-lg shadow">
+                            <thead class="bg-slate-100"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Role/Level</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Employed Annual Salary (£)</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Freelance Hourly Rate (£)</th></tr></thead>
+                            <tbody class="divide-y divide-slate-200"><tr><td class="px-6 py-4 whitespace-nowrap">Junior/Entry-Level</td><td class="px-6 py-4 whitespace-nowrap">18,000 - 30,000</td><td class="px-6 py-4 whitespace-nowrap">20 - 60</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Mid-Level/Average</td><td class="px-6 py-4 whitespace-nowrap">~31,000 - 38,000</td><td class="px-6 py-4 whitespace-nowrap">40 - 80</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Senior/Experienced</td><td class="px-6 py-4 whitespace-nowrap">30,000 - 57,000+</td><td class="px-6 py-4 whitespace-nowrap">60 - 100+</td></tr></tbody>
+                        </table>
+                        <p class="mt-2 text-sm text-slate-600">Note: Freelance annual equivalents can range from ~£37k (entry) to ~£40k+ (experienced). Project-based pricing also common.</p>
+                    </div>
+                </div>
+                <div id="web-day" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">A Day in the Life</h3>
+                    <p class="mb-3">Varied, often juggling multiple projects. Starts with planning, organizing, and administrative tasks like client communication. Briefing sessions with clients/project managers are crucial. Design process involves drafting ideas, using design software, focusing on visual harmony, brand identity, color theory, typography, layout, and usability. Collaboration with colleagues/art directors for reviews is key. Researching new trends, techniques, and software is ongoing. May involve front-end coding (HTML, CSS, JavaScript) or preparing assets for developers. Testing for responsiveness and making adjustments based on feedback. Work can be office-based, remote, or at client's business.</p>
+                </div>
+                <div id="web-suitability" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Is This Role For You?</h3>
+                    <div class="grid md:grid-cols-2 gap-6"><div><h4 class="text-xl font-medium text-slate-700 mb-2">Interests:</h4><ul class="list-disc list-inside space-y-1"><li>Visual Design and Aesthetics (graphic design, typography, color).</li><li>Technology and the Web (how websites work, digital media).</li><li>User Experience (UX) (understanding user behavior).</li><li>Problem-Solving (translating needs into design solutions).</li><li>Continuous Learning (design trends, software, web standards).</li></ul></div><div><h4 class="text-xl font-medium text-slate-700 mb-2">Personality Traits:</h4><ul class="list-disc list-inside space-y-1"><li>Creativity and Innovation</li><li>Attention to Detail</li><li>Empathy (for client and end-user)</li><li>Good Communication Skills</li><li>Analytical Skills</li><li>Problem-Solving Skills</li><li>Adaptability and Flexibility</li><li>Organisational Skills and Time Management</li><li>Proactivity and Initiative</li><li>Patience and Persistence</li></ul></div></div>
+                    <p class="mt-4">Well-suited for visual thinkers who enjoy blending art with technology and creating engaging, functional digital experiences.</p>
+                </div>
+                <div id="web-education" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Educational Pathways & Typical Degrees</h3>
+                    <p class="mb-3">Multiple routes exist:</p>
+                    <ol class="list-decimal list-inside space-y-2"><li><strong>University Degree:</strong> Web Design and Development (specialized degrees), Graphic Design (with web/digital focus), Multimedia Design / Digital Media Development, Computer Science / Software Engineering (needs strong design skills/portfolio), UX/UI Design (specialized degrees/modules). Typically 2-3 A-levels. Art/design A-level often for Graphic Design.</li><li><strong>Higher National Diploma (HND) or Foundation Degree:</strong> Vocational, practical route.</li><li><strong>College Courses & Certificates:</strong> L3 Certificates, T Levels, L4 Diplomas, PgCerts, specialized UX/UI certificates.</li><li><strong>Apprenticeships:</strong> E.g., Content Creator (L3), Creative Digital Design (L6 Degree Apprenticeship).</li><li><strong>Bootcamps:</strong> Intensive (3-6 months) practical courses (HTML, CSS, JS, React, etc.).</li><li><strong>Self-Taught and Portfolio:</strong> Common. A strong, diverse portfolio is critical.</li></ol>
+                    <p class="mt-3">Building a compelling portfolio is paramount. Staying updated with trends, software (Figma, Adobe XD), and best practices is crucial. Certifications can supplement learning.</p>
+                </div>
+            </section>
+
+            <section id="game-developer" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">Game Developer</h2>
+                <p class="text-slate-600 mb-6">A team of specialists creating video games, including programmers, designers, and artists.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button game-developer-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="game-overview">Overview</button>
+                        <button class="tab-button game-developer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="game-salary">Salary</button>
+                        <button class="tab-button game-developer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="game-day">A Day in the Life</button>
+                        <button class="tab-button game-developer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="game-suitability">Is This For You?</button>
+                        <button class="tab-button game-developer-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="game-education">Education</button>
+                    </nav>
+                </div>
+                <div id="game-overview" class="tab-content active">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Role Overview</h3>
+                    <p class="mb-3">"Game Developer" encompasses specialists who create video games. Key roles:</p>
+                    <ul class="list-disc list-inside space-y-2 mb-3"><li><strong>Game Programmer:</strong> Writes code (C++, C# in Unity/Unreal Engine) for game systems, mechanics, AI, physics, graphics, network. Performs code reviews, refactors.</li><li><strong>Game Designer:</strong> Focuses on concepts, ideas, stories, characters, rules, game mechanics, levels, UX. Creates design documents, storyboards, prototypes. Collaborates, conducts market research, playtests.</li><li><strong>Game Artist:</strong> Creates visual elements: characters, environments, objects, UI, animations. Specializes in 3D modeling, 2D art, texturing, lighting. Uses art software and game engines.</li></ul>
+                    <p>Development is highly collaborative through planning, pre-production, production, testing, launch, and post-launch support.</p>
+                </div>
+                <div id="game-salary" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Average Salary in the UK</h3>
+                    <p class="mb-4">Varies by role, experience, studio size/type, and location. Game success and specific expertise also impact earnings. Online programming roles often highest paid; QA roles lower.</p>
+                    <div class="chart-container mb-6"><canvas id="gameSalaryChart"></canvas></div>
+                     <div class="overflow-x-auto">
+                        <table class="min-w-full bg-white border border-slate-300 rounded-lg shadow">
+                            <thead class="bg-slate-100"><tr><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Experience Level</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Game Programmer (£)</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Game Designer (£)</th><th class="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Game Artist (£)</th></tr></thead>
+                            <tbody class="divide-y divide-slate-200"><tr><td class="px-6 py-4 whitespace-nowrap">Junior/Entry-Level</td><td class="px-6 py-4 whitespace-nowrap">22,500 - 39,000</td><td class="px-6 py-4 whitespace-nowrap">26,000 - 26,500</td><td class="px-6 py-4 whitespace-nowrap">18,000 - 25,000</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Mid-Career</td><td class="px-6 py-4 whitespace-nowrap">31,000 - 50,000</td><td class="px-6 py-4 whitespace-nowrap">~40,500 - 44,000</td><td class="px-6 py-4 whitespace-nowrap">~30,000 - 45,000</td></tr><tr><td class="px-6 py-4 whitespace-nowrap">Senior/Lead</td><td class="px-6 py-4 whitespace-nowrap">50,000 - 70,000+</td><td class="px-6 py-4 whitespace-nowrap">44,000 - 87,000+</td><td class="px-6 py-4 whitespace-nowrap">30,000 - 40,000+</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="game-day" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">A Day in the Life</h3>
+                    <p class="mb-3">Varies by role and project stage. Collaboration and iteration are common.</p>
+                    <ul class="list-disc list-inside space-y-3"><li><strong>Game Programmer:</strong> Starts with team meetings. Main work is writing, testing, debugging code for core systems, mechanics, AI, UI, etc. Focus shifts based on project phase (development, testing, post-launch). "Crunch" (overtime) can occur.</li><li><strong>Game Designer:</strong> Varied. Brainstorming concepts, mechanics, storylines. Creating design documents, scripts, storyboards. Collaborating with programmers/artists. Market research, playtesting, iterating on designs.</li><li><strong>Game Artist:</strong> Starts with team meetings. Tasks depend on project stage: ideating visual style (pre-production), creating 2D/3D assets (production using Maya, Blender, ZBrush, Photoshop), optimizing assets (testing), final refinements (launch). Technical artists may switch between programming, engine work, and asset inspection.</li></ul>
+                    <p class="mt-3">Across roles, passion for games and creativity are motivators. Involves problem-solving.</p>
+                </div>
+                <div id="game-suitability" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Is This Role For You?</h3>
+                     <div class="grid md:grid-cols-2 gap-6"><div><h4 class="text-xl font-medium text-slate-700 mb-2">Interests:</h4><ul class="list-disc list-inside space-y-1"><li>Passion for Video Games (playing and understanding how they're made).</li><li>Creativity and Imagination.</li><li>Problem-Solving (technical, design, artistic).</li><li>Storytelling and Narrative (for designers).</li><li>Technology and Programming (for programmers: coding, maths, physics, engines).</li><li>Visual Arts (for artists: drawing, modeling, animation).</li></ul></div><div><h4 class="text-xl font-medium text-slate-700 mb-2">Personality Traits:</h4><ul class="list-disc list-inside space-y-1"><li>Teamwork and Collaboration</li><li>Communication Skills</li><li>Problem-Solving and Critical Thinking</li><li>Creativity and Innovation</li><li>Attention to Detail</li><li>Adaptability and Flexibility</li><li>Persistence and Determination</li><li>Time Management</li><li>Technical Aptitude (software, languages, engines)</li><li>Passion for Learning</li></ul></div></div>
+                    <p class="mt-4">Fulfilling for those who are imaginative, logical, enjoy teamwork, and are driven to create engaging interactive experiences.</p>
+                </div>
+                <div id="game-education" class="tab-content">
+                    <h3 class="text-2xl font-medium text-sky-600 mb-4">Educational Pathways & Typical Degrees</h3>
+                    <p class="mb-3">Various routes, strong emphasis on practical skills and portfolio.</p>
+                    <ol class="list-decimal list-inside space-y-2"><li><strong>University Degrees (BA/BSc/BEng, Master's):</strong> For Game Programmers: Computer Games Programming, Games Technology, Computer Science (games spec.), Software Engineering, Maths/Physics (with strong programming). For Game Designers: Computer Games Design, Game Design, Interactive Media, Graphic Design/Animation (design focus). For Game Artists: Games Art, Computer Animation (for games), Fine Art, Graphic Design, Illustration (with game art portfolio). TIGA accredits some UK games courses.</li><li><strong>Higher National Diploma (HND) or Foundation Degree:</strong> Vocational qualifications in game dev, design, or art.</li><li><strong>Apprenticeships:</strong> E.g., Game Programmer Level 7 Degree Apprenticeship.</li><li><strong>Alternative Routes & Portfolio:</strong> Entry as QA Technician/Tester. Self-Taught + Portfolio (especially for art/indie dev). Building a Portfolio is VITAL for all roles (projects, game jams). Game Jams and Community Projects: Excellent for experience, portfolio, networking.</li></ol>
+                    <p class="mt-3">Postgraduate degree not essential but can be useful. Proficiency in C++, game engines (Unity, Unreal), and art software is key.</p>
+                </div>
+            </section>
+
+            <section id="degrees-overview" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-6">Understanding the Degrees</h2>
+                <p class="mb-4 text-lg">This section delves into the specifics of typical degrees that serve as pathways into technology careers. Understanding the content, structure, and demands of these degrees is crucial for making an informed choice. Select a degree type from the sub-navigation (revealed on the left when 'Understanding Degrees' is active) to learn more.</p>
+                <p class="mb-4">Each degree profile will cover:</p>
+                <ul class="list-disc list-inside space-y-2 mb-6 bg-sky-50 p-4 rounded-lg border border-sky-200">
+                    <li><strong>Overview and Suitability:</strong> What the degree is about and which careers it typically leads to.</li>
+                    <li><strong>Entry Requirements and Difficulty:</strong> Common A-level/IB requirements, typical difficulty, and competitiveness.</li>
+                    <li><strong>Course Structure and Learning Experience:</strong> Duration, teaching methods, assessment, and student experience.</li>
+                    <li><strong>Core Topics and Specializations:</strong> Key subjects covered and areas for potential specialization.</li>
+                </ul>
+                <p>Use the navigation panel to select a specific degree for detailed information.</p>
+            </section>
+
+            <section id="degree-cs" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">BSc/BEng Computer Science</h2>
+                <p class="text-slate-600 mb-6">A foundational degree exploring the theory and practice of computation, versatile for many tech roles.</p>
+                <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button degree-cs-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="cs-overview">Overview & Suitability</button>
+                        <button class="tab-button degree-cs-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="cs-entry">Entry & Difficulty</button>
+                        <button class="tab-button degree-cs-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="cs-structure">Structure & Learning</button>
+                        <button class="tab-button degree-cs-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="cs-topics">Core Topics & Specializations</button>
+                    </nav>
+                </div>
+                <div id="cs-overview" class="tab-content active">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Overview and Suitability</h3>
+                    <p>A BSc/BEng in Computer Science explores theoretical underpinnings and practical applications of computation. It's highly versatile, providing a strong basis for roles like Software Engineers, AI/ML Researchers (often as a prerequisite for further study), Game Programmers, and Computer Hardware Engineers (with relevant modules). It cultivates problem-solving, analytical thinking, and programming proficiency.</p>
+                </div>
+                <div id="cs-entry" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Entry Requirements and Difficulty</h3>
+                    <p class="mb-2">Entry is competitive, especially at top UK universities.</p>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>A-levels:</strong> AAA-AAB (Top unis: A\*A\*A - A\*AA). Mathematics A-level almost universally required; Further Mathematics often highly recommended/mandatory. Physics or another science may be preferred.</li><li><strong>IB:</strong> 36-42 points (Top unis: 41-42). HL Maths essential.</li><li><strong>GCSEs:</strong> Solid grades in English Language and Mathematics.</li><li><strong>Admissions Tests:</strong> Some unis (e.g., Oxford MAT, Cambridge TMUA/CSAT) require tests. Interviews common.</li></ul>
+                    <p>The degree is challenging due to mathematical intensity and logical rigor. Demands dedication. Industry placements (sandwich courses) enhance employability.</p>
+                </div>
+                <div id="cs-structure" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Course Structure and Learning Experience</h3>
+                     <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>Duration:</strong> BSc typically 3 years. 4-year integrated Master's (MEng/MCompSci) common for specialization.</li><li><strong>Teaching:</strong> Lectures, practical labs (programming, hardware), tutorials (small groups at some unis like Oxford/Cambridge). Significant individual and group project work.</li><li><strong>Assessment:</strong> Written exams, coursework (programming assignments, essays, reports), practicals, project reports, presentations, final-year dissertation/project.</li><li><strong>Student Satisfaction:</strong> Varies. Practical skills, real-world projects, quality of teaching, and support influence experience.</li></ul>
+                    <p>Balances theory and practice. Top programs are rigorous.</p>
+                    <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example Structure (e.g., University of Cambridge based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Year 1 (Foundations):</strong> Discrete & Continuous Maths, Programming (OCaml, Java), OS, Hardware, Interaction Design, ML. (Lectures, Practicals, Supervisions)</p><p><strong>Year 2 (Core CS):</strong> Theory (Logic, Computation), Systems (Architecture, Networking), Programming (Compilers, Language Design), Human Aspects (HCI, AI). (Lectures, Practicals, Group Project)</p><p><strong>Year 3 (Specialization & Project):</strong> Choice of topics (Data Science, Robotics, NLP, etc.), Substantial Individual Project/Dissertation. (Lectures, Coursework, Project)</p><p><strong>Year 4 (MEng option):</strong> Advanced Study & Research Project. (Advanced Modules, Research Project)</p></div>
+                    </div>
+                </div>
+                <div id="cs-topics" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Core Topics and Specializations</h3>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Core Topics (Years 1-2) ▾</h4>
+                        <ul id="csCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1">
+                            <li>Mathematics (Discrete, Continuous)</li><li>Programming (Java, Python, C++, C, OCaml; OOP, Functional)</li><li>Algorithms and Data Structures</li><li>Computer Architecture and Systems</li><li>Operating Systems</li><li>Computer Networks</li><li>Databases</li><li>Software Engineering Principles</li><li>Theory of Computation</li><li>Logic and Proof</li><li>Intro to AI/ML</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Specializations (Years 3-4 / MEng) ▾</h4>
+                        <ul class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Artificial Intelligence, Machine Learning, Data Science</li><li>Cyber Security</li><li>Computer Graphics, Human-Computer Interaction (HCI)</li><li>Bioinformatics, Natural Language Processing (NLP)</li><li>Web Science/Development, Robotics</li><li>Theoretical Computer Science, Quantum Computing, Computer Vision</li></ul>
+                    </div>
+                    <p class="mt-3">Broad foundation and specialization options make graduates adaptable for diverse tech careers.</p>
+                </div>
+            </section>
+            
+            <section id="degree-se" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">BSc/BEng Software Engineering</h2>
+                <p class="text-slate-600 mb-6">Focuses on systematic design, development, testing, and maintenance of software systems.</p>
+                <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button degree-se-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-deg-overview">Overview & Suitability</button>
+                        <button class="tab-button degree-se-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-deg-entry">Entry & Difficulty</button>
+                        <button class="tab-button degree-se-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-deg-structure">Structure & Learning</button>
+                        <button class="tab-button degree-se-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="se-deg-topics">Core Topics & Specializations</button>
+                    </nav>
+                </div>
+                <div id="se-deg-overview" class="tab-content active">
+                     <h3 class="text-xl font-medium text-sky-600 mb-3">Overview and Suitability</h3>
+                    <p>A BSc/BEng in Software Engineering focuses intensively on systematic design, development, testing, and maintenance of software. It emphasizes engineering principles, methodologies (Agile), project management, and building large-scale, reliable software. Ideal for aspiring Software Engineers and Game Programmers needing robust development skills. Equips graduates to manage the entire software development lifecycle.</p>
+                </div>
+                <div id="se-deg-entry" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Entry Requirements and Difficulty</h3>
+                    <p class="mb-2">Comparable to Computer Science in rigor.</p>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>A-levels:</strong> Typically AAA-ABB. Mathematics often required.</li><li><strong>IB/GCSEs:</strong> Similar to CS, strong mathematical foundation key.</li><li><strong>Difficulty:</strong> Demanding, requiring strong aptitude in programming, logical reasoning, and understanding complex software systems. Intensive project work. Not an "easier" option than CS, but a distinct engineering discipline.</li></ul>
+                </div>
+                <div id="se-deg-structure" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Course Structure and Learning Experience</h3>
+                     <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>Duration:</strong> Typically 3 years (BEng/BSc), 4-year MEng options available.</li><li><strong>Teaching:</strong> Lectures, significant practical labs, tutorials, strong emphasis on group projects simulating industry (e.g., Sheffield's "Software Hut"). Final year individual projects/dissertations. Incorporates modern practices like Agile.</li><li><strong>Assessment:</strong> Coursework (programming projects, design documents, reports), exams, project deliverables, presentations.</li><li><strong>Student Experience:</strong> Emphasizes hands-on experience, research-led teaching, and aims to make graduates industry-ready.</li></ul>
+                     <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example Structure (e.g., University of Sheffield based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Year 1 (Foundations & Intro to SE):</strong> Intro to SE, Foundations of CS (Maths), Java Programming, Algorithms & Data Structures, Systems & Networks, Intro to AI. (Lectures, Labs, Global Engineering Challenge)</p><p><strong>Year 2 (Core SE & System Design):</strong> Programming Language Principles, Robotics, Databases & Logic, Software Hut (Group Project), Automata, Computation & Complexity, AI. (Lectures, Labs, "Software Hut" Group Project)</p><p><strong>Year 3 (Specialization & Major Project):</strong> Dissertation Project, Accounting & Law for Engineers, Software Testing & Analysis. Optional modules (e.g., Computer Vision, Text Processing, Security). (Individual Dissertation, Specialized Study)</p></div>
+                    </div>
+                </div>
+                <div id="se-deg-topics" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Core Topics and Specializations</h3>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Core Topics ▾</h4>
+                        <ul id="seCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1">
+                            <li>Foundations of CS (discrete maths, logic, algorithms)</li><li>Programming (Java, Python, C++; paradigms)</li><li>Software Engineering Principles (design, methodologies - Agile/Waterfall, requirements, architecture, QA, testing, maintenance, reliability, usability, cost)</li><li>Algorithms and Data Structures</li><li>Databases and Data Management</li><li>Operating Systems and Networks</li><li>Intro to AI (often included)</li><li>Programming Language Principles</li><li>Software Testing and Analysis</li><li>Professional Issues (ethics, legal, project management)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Specializations ▾</h4>
+                        <ul class="list-disc list-inside ml-4 accordion-content space-y-1"><li>AI and Machine Learning applications</li><li>Mobile and Web Application Development</li><li>Cyber Security Engineering</li><li>Data Mining and Big Data Systems</li><li>Cloud Computing</li><li>Embedded Software Systems</li></ul>
+                    </div>
+                    <p class="mt-3">Deep dive into the entire software development lifecycle, emphasizing practical skills and robust methodologies.</p>
+                </div>
+            </section>
+
+            <section id="degree-eee-cse" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">BEng/MEng Electrical & Electronic Engineering / Computer Systems Engineering</h2>
+                <p class="text-slate-600 mb-6">Focuses on electricity, electronics, electromagnetism, and computer hardware design.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button degree-eee-cse-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="eee-cse-overview">Overview & Suitability</button>
+                        <button class="tab-button degree-eee-cse-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="eee-cse-entry">Entry & Difficulty</button>
+                        <button class="tab-button degree-eee-cse-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="eee-cse-structure">Structure & Learning</button>
+                        <button class="tab-button degree-eee-cse-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="eee-cse-topics">Core Topics & Specializations</button>
+                    </nav>
+                </div>
+                <div id="eee-cse-overview" class="tab-content active">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Overview and Suitability</h3>
+                    <p><strong>Electrical and Electronic Engineering (EEE)</strong> covers microelectronics to power systems. <strong>Computer Systems Engineering (CSE)</strong> / Computer Engineering integrates EE with CS, focusing on computer hardware design and its controlling software. Primary route for Computer Hardware Engineers. Graduates may also be Software Engineers (embedded systems, firmware) or contribute to AI/ML Research (hardware acceleration, embedded AI).</p>
+                </div>
+                <div id="eee-cse-entry" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Entry Requirements and Difficulty</h3>
+                    <p class="mb-2">Rigorous engineering disciplines.</p>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>A-levels:</strong> AAA-ABB. Maths and Physics almost always mandatory (high grades). Further Maths, Chemistry, CS, Electronics useful.</li><li><strong>IB:</strong> 30-38 points. HL Maths and Physics essential.</li><li><strong>GCSEs:</strong> Good grades in English Language and Maths.</li><li><strong>Difficulty:</strong> Highly challenging due to advanced maths (calculus, differential equations) and physics (electromagnetism, semiconductor physics), complex circuit theory, and systems thinking. CSE deals with logical proofs and intricate system structures.</li></ul>
+                </div>
+                <div id="eee-cse-structure" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Course Structure and Learning Experience</h3>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>Duration:</strong> 3 years (BEng), 4 years (MEng, often with industrial placement/study abroad).</li><li><strong>Teaching:</strong> Lectures, extensive practical lab work (core component), tutorials, seminars, individual/group design projects. Use of industry-standard equipment/software.</li><li><strong>Assessment:</strong> Written exams, coursework (lab reports, design projects, programming for CSE), presentations, final-year project/dissertation.</li><li><strong>Student Satisfaction:</strong> Can be high, linked to practical nature. QMUL CSE students appreciate EE/CS blend.</li></ul>
+                    <p>Very hands-on, applying theory in labs and design projects.</p>
+                     <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example BEng CSE Structure (e.g., Queen Mary University of London based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Year 1 (Foundations in Programming & Electronics):</strong> Procedural Programming, EE Maths, Digital Circuit Design, Analogue Electronic Systems, Comms & Networks, OOP. (C, Java, Basic Circuits, Digital Logic)</p><p><strong>Year 2 (Core Systems & SE):</strong> Microprocessor Systems Design, SE, Digital Systems Design (potential HDL), OS, Comms Systems, Algorithms & Data Structures. (Assembly, C, Software Design, OS Concepts, VHDL project-based)</p><p><strong>Year 3 (Specialization & Major Project):</strong> Individual Project, Embedded Systems, IC Design. Optional: Control Systems, DSP, Data Mining, Big Data, Security, Neural Networks. (Advanced Embedded Systems, IC Design, Specialization)</p></div>
+                    </div>
+                </div>
+                <div id="eee-cse-topics" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Core Topics and Specializations</h3>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Core EEE Topics ▾</h4>
+                        <ul class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Circuit Theory, Digital & Analogue Electronics, Semiconductor Devices</li><li>Electromagnetism, Power Electronics/Systems, Communication Systems</li><li>Control Systems, Signal Processing, Engineering Mathematics</li><li>Programming (C, C++, Python, MATLAB)</li></ul>
+                    </div>
+                     <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Core CSE Topics (includes EEE topics plus) ▾</h4>
+                        <ul id="eeeCseCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1">
+                            <li>Computer Architecture & Organisation, Operating Systems</li><li>Data Networks, Cyber Security (for networked systems)</li><li>OOP, Microcontroller/Microprocessor Principles, Embedded Systems Design</li><li>Software Engineering (for embedded systems), Hardware Description Languages (HDLs: VHDL/Verilog)</li><li>Circuit Theory, Digital & Analogue Electronics, Semiconductor Devices</li><li>Electromagnetism, Communication Systems</li><li>Control Systems, Signal Processing, Engineering Mathematics</li><li>Programming (C, C++, Python, MATLAB)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Specializations ▾</h4>
+                        <ul class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Robotics, Embedded Systems/IoT, AI (hardware acceleration)</li><li>Power Generation (renewables), Smart Grids, Telecommunications</li><li>Digital Systems Design/VLSI, Control & Automation, Bioelectronics</li></ul>
+                    </div>
+                    <p class="mt-3">EEE provides broad electrical/electronic foundation; CSE focuses on computer hardware/software integration. HDLs crucial for digital IC design.</p>
+                </div>
+            </section>
+
+            <section id="degree-web" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">BA/BSc Web Design & Development / Graphic Design (Web Focus) / UX/UI Design</h2>
+                <p class="text-slate-600 mb-6">Degrees for creating websites, web apps, and digital user experiences, blending creative and technical skills.</p>
+                 <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button degree-web-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-deg-overview">Overview & Suitability</button>
+                        <button class="tab-button degree-web-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-deg-entry">Entry & Difficulty</button>
+                        <button class="tab-button degree-web-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-deg-structure">Structure & Learning</button>
+                        <button class="tab-button degree-web-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="web-deg-topics">Core Topics & Specializations</button>
+                    </nav>
+                </div>
+                <div id="web-deg-overview" class="tab-content active">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Overview and Suitability</h3>
+                    <p class="mb-2">This category includes:</p>
+                    <ul class="list-disc list-inside space-y-1"><li><strong>BA/BSc Web Design and Development:</strong> Targets skills to design and build websites (front-end, often back-end).</li><li><strong>BA Graphic Design (Web/Digital Focus):</strong> Traditional Graphic Design with significant digital media, web design, UI/UX components.</li><li><strong>UX/UI Design Courses (Certificates, Diplomas, degree modules):</strong> Focus on user needs, intuitive interfaces, positive user experience.</li></ul>
+                    <p class="mt-2">Primarily for aspiring Web Designers and UX/UI Designers. Web Development graduates with strong coding skills might pursue Software Engineer roles (web tech).</p>
+                </div>
+                <div id="web-deg-entry" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Entry Requirements and Difficulty</h3>
+                    <p class="mb-2">Diverse entry routes.</p>
+                     <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>A-levels (Web Design/Dev):</strong> 1-2 for HNDs, 2-3 for degrees (e.g., 112-128 UCAS points). IT, media, design subjects advantageous.</li><li><strong>A-levels (Graphic Design):</strong> BBB-BCC, often requires Art/Design A-level.</li><li><strong>IB/BTEC/Access to HE Diplomas:</strong> Widely accepted.</li><li><strong>GCSEs:</strong> Passes in English Language and Maths.</li><li><strong>Portfolio:</strong> Often mandatory for Graphic Design, may be requested for Web Design/UX/UI to assess practical aptitude.</li><li><strong>Difficulty:</strong> Varies. Foundational skills accessible via shorter courses/bootcamps. Degree-level has academic rigor but generally less mathematical intensity than engineering/CS. Challenge is mastering diverse tools, design principles, coding, and evolving trends. Focus on practical application and portfolio.</li></ul>
+                    <p>Industry emphasizes demonstrable skills and portfolio.</p>
+                </div>
+                <div id="web-deg-structure" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Course Structure and Learning Experience</h3>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>Duration:</strong> Varies. PgCerts (1 yr PT), BSc/BA (3 yrs FT, sometimes 4 with foundation/placement), Bootcamps (3-6 months intensive).</li><li><strong>Teaching:</strong> Highly practical, project-based. Lectures, seminars, hands-on workshops, computer labs, project assessments. Aim to replicate industry practices.</li><li><strong>Assessment:</strong> Practical application. MCQs, online portfolios, blog posts, programming coursework, design projects, practical assignments, presentations.</li><li><strong>Student Satisfaction:</strong> Can be high if aligned with industry and good support.</li></ul>
+                    <p>Very hands-on, emphasizing professional portfolio development. Geared towards job-readiness.</p>
+                     <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example BSc Web Design & Development Structure (e.g., University of Roehampton based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Foundation Year (Optional):</strong> Academic Skills, Data Analysis, Foundations of CS, Problem Solving.</p><p><strong>Year 1 (Core Web & Computing):</strong> Advanced Foundations of CS, Software Development, Web Design, Backend & Frontend Concepts, Programming, Data Analysis. (HTML, CSS, JS basics, design fundamentals)</p><p><strong>Year 2 (Advanced Dev & Specialization):</strong> Modules building on Year 1, potential options (mobile, e-commerce). (Advanced programming, frameworks/CMS, UX/UI, project management)</p><p><strong>Placement Year (Optional):</strong> One-year paid work placement.</p><p><strong>Year 3 (Major Projects & Advanced Specialization):</strong> Optional modules, significant individual/group project, portfolio development. (In-depth specialization, professional portfolio)</p></div>
+                    </div>
+                </div>
+                <div id="web-deg-topics" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Core Topics and Specializations</h3>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Web Design & Development Core Topics ▾</h4>
+                        <ul id="webDevCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1">
+                            <li>Front-end (HTML, CSS, JavaScript), Back-end (PHP, Python, Node.js, MySQL)</li><li>Web design principles (usability, accessibility, responsive design, UX)</li><li>Visual design (layout, typography, color), Prototyping/wireframing tools</li><li>Content Management Systems (CMS - WordPress, Joomla)</li><li>Software development concepts, web analytics</li>
+                        </ul>
+                    </div>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Graphic Design (Web/Digital Focus) Core Topics ▾</h4>
+                        <ul id="graphicDesignCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Fundamental design principles (composition, hierarchy, balance)</li><li>Typography, Branding & identity design</li><li>Digital media software (Adobe Creative Suite - Photoshop, Illustrator, InDesign, XD)</li><li>Digital & Experience Design (websites, mobile apps, social media, motion, UI/UX)</li><li>Creative workflow, digital storytelling, illustrative design</li></ul>
+                    </div>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">UX/UI Design Core Topics ▾</h4>
+                        <ul id="uxUiCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1"><li>User-Centred Design (UCD), User research (interviews, surveys, personas)</li><li>Usability testing, Information architecture, user flows, journey mapping</li><li>Wireframing & prototyping (low/high fidelity), UI patterns, interaction design</li><li>Accessibility standards, Design thinking, Lean UX</li></ul>
+                    </div>
+                     <div>
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Specializations ▾</h4>
+                        <ul class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Full-stack, front-end, or back-end development</li><li>UX design, UI design, SEO specialization</li><li>E-commerce development, Mobile app design/development</li><li>Digital marketing, Branding and Identity (Graphic Design)</li></ul>
+                    </div>
+                    <p class="mt-3">Covers a spectrum from technical development to creative, user-focused design.</p>
+                </div>
+            </section>
+
+            <section id="degree-games" class="content-section">
+                <h2 class="text-3xl font-semibold text-sky-700 mb-2">BA/BSc Game Development / Game Design / Game Art / CS for Games</h2>
+                <p class="text-slate-600 mb-6">Specialized degrees for careers in the video game industry, focusing on programming, design, or art.</p>
+                <div class="mb-6 border-b border-slate-300">
+                    <nav class="flex space-x-1 flex-wrap" aria-label="Tabs">
+                        <button class="tab-button degree-games-tab active px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="games-deg-overview">Overview & Suitability</button>
+                        <button class="tab-button degree-games-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="games-deg-entry">Entry & Difficulty</button>
+                        <button class="tab-button degree-games-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="games-deg-structure">Structure & Learning</button>
+                        <button class="tab-button degree-games-tab px-4 py-2 font-medium text-sm rounded-t-md text-slate-700 hover:bg-sky-100" data-tab="games-deg-topics">Core Topics & Specializations</button>
+                    </nav>
+                </div>
+                 <div id="games-deg-overview" class="tab-content active">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Overview and Suitability</h3>
+                    <p class="mb-2">Tailored for the video game industry:</p>
+                    <ul class="list-disc list-inside space-y-1"><li><strong>BSc/BEng Computer Games Programming / Games Technology / CS for Games:</strong> Technical focus on programming, engines, AI, physics, graphics. For Game Programmers.</li><li><strong>BA/BSc Game Design:</strong> Conceptual/interactive aspects: mechanics, level design, narrative, UX. For Game Designers.</li><li><strong>BA Game Art / Computer Animation (for games):</strong> Visual creation: 2D/3D art, characters, environments, animation. For Game Artists.</li><li><strong>BSc Game Development:</strong> Broader, may encompass elements of all or allow specialization.</li></ul>
+                    <p class="mt-2">Primarily for aspiring Game Developers in specialized roles.</p>
+                </div>
+                <div id="games-deg-entry" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Entry Requirements and Difficulty</h3>
+                    <p class="mb-2">Varies by focus.</p>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>A-levels (Games Programming/CS for Games):</strong> CCC-BBB. Maths or CS A-level often required/preferred.</li><li><strong>A-levels (Game Design/Art):</strong> CCC-BBB/DMM (BTEC). Art & Design A-level common for Game Art.</li><li><strong>Portfolio:</strong> Often essential for art/design (creative work) or programming (projects).</li><li><strong>GCSEs:</strong> Passes in English and Maths generally required.</li><li><strong>Difficulty:</strong> Intensive, requiring creative and technical skills. Programming courses demand logic/problem-solving. Art/design courses need artistic talent, software proficiency. Significant project work, often tight deadlines.</li></ul>
+                    <p>Strong emphasis on portfolio and practical skills.</p>
+                </div>
+                <div id="games-deg-structure" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Course Structure and Learning Experience</h3>
+                    <ul class="list-disc list-inside space-y-1 mb-2"><li><strong>Duration:</strong> Typically 3 years (BA/BSc), some 4-year options (foundation/placement).</li><li><strong>Teaching:</strong> Practical, project-based. Lectures, workshops, studio sessions, lab work, group projects (mimicking studios), individual projects. Guest lectures, game jams common.</li><li><strong>Assessment:</strong> Primarily coursework: game prototypes, design documents, art portfolios, programming projects, presentations, final major projects. Exams in technical modules.</li><li><strong>Student Experience:</strong> Access to industry-standard software/hardware (Unity, Unreal, Maya, etc.). Strong industry links (placements, guest speakers). Collaborative environment, portfolio building.</li></ul>
+                    <p>Immersive and practical, preparing for collaborative, deadline-driven industry.</p>
+                    <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example BSc Games Programming Structure (e.g., University of Northampton based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Stage 1 (Foundational Programming & Game Concepts):</strong> Group Game Project: Fundamentals, Programming 2D Games, Fundamentals of Programming, Programming for Game Engines, Database Design, Games Architecture. (C#, Unity 2D, MySQL)</p><p><strong>Stage 2 (Advanced Programming & 3D Dev):</strong> Indie Games Dev, Native Programming & Compilation, Group Game Project: Advanced, Maths For Games, 2D Graphics Prog, Prog 3D Games. (C++, Unity/Unreal 3D, Algebra, Geometry)</p><p><strong>Stage 3 (Specialization & Prof Dev):</strong> Graphics 2, Game Techniques 3, Group Project 3, Simulation & Dynamics, Advanced AI, Games Dissertation. (Advanced Graphics, Social Game Dev, AI, Research)</p></div>
+                    </div>
+                     <div class="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-md">
+                        <h4 class="font-semibold text-slate-700 mb-2 accordion-toggle cursor-pointer">Example BA Games Art Structure (e.g., University of Northampton based) ▾</h4>
+                        <div class="accordion-content space-y-2"><p><strong>Stage 1 (Foundational Art & 3D Skills):</strong> Drawing Fundamentals, Group Game Project: Fundamentals, 2D & 3D Game Asset Production, 3D Character Art, Material Development. (Digital Graphics, 3D Modelling, Texturing)</p><p><strong>Stage 2 (Advanced Art Production & Specialism):</strong> 3D Environment Modelling, Digital Sculpting Fundamentals, Group Game Project: Advanced, Concept Art Techniques, 3D Art for Game Engines, Digital Sculpting for Character Art. (Environment Art, Sculpting, Concept Art, Unity/Unreal)</p><p><strong>Stage 3 (Portfolio & Prof Practice):</strong> Group Project 3, Visual Studies for Games 3, Professional Practice, Art Director Portfolio (Final Major Project). (Advanced Project Work, Portfolio Dev, Pitching)</p></div>
+                    </div>
+                </div>
+                <div id="games-deg-topics" class="tab-content">
+                    <h3 class="text-xl font-medium text-sky-600 mb-3">Core Topics and Specializations</h3>
+                    <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Game Programming / CS for Games Core Topics ▾</h4>
+                        <ul id="gameProgCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1">
+                            <li>Programming (C++, C#, Java, Python), OOP, Maths & Physics for games</li><li>Game engine dev/use (Unity, Unreal), AI for games, Graphics Programming</li><li>Data Structures & Algorithms, Network programming, SE for games</li>
+                        </ul>
+                    </div>
+                     <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Game Design Core Topics ▾</h4>
+                        <ul id="gameDesignCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1"><li>Game theory & mechanics, Level design, Narrative design, UX/UI for games</li><li>Prototyping, Playtesting & iteration, Game production fundamentals</li></ul>
+                    </div>
+                     <div class="mb-3">
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Game Art Core Topics ▾</h4>
+                        <ul id="gameArtCoreTopicsList" class="list-disc list-inside ml-4 accordion-content space-y-1"><li>2D art (concept, illustration, UI), 3D modeling/sculpting (Maya, Blender, ZBrush)</li><li>Texturing (Substance Painter), Animation (2D/3D), Lighting & rendering</li><li>Art direction, Visual storytelling, Asset implementation in engines</li></ul>
+                    </div>
+                     <div>
+                        <h4 class="font-semibold text-slate-700 mb-1 accordion-toggle cursor-pointer">Specializations ▾</h4>
+                        <p class="ml-4 accordion-content">Via elective modules and final projects (e.g., AI/graphics programming, narrative/UX design, character/environment art).</p>
+                    </div>
+                    <p class="mt-3">Provides foundational knowledge and specialized skills for chosen discipline, strong emphasis on portfolio.</p>
+                </div>
+            </section>
+            
+        </main>
+    </div>
+
+    <script>
+        const mainNavButtons = document.querySelectorAll('#mainNav .main-nav-button');
+        const subNavButtons = document.querySelectorAll('#mainNav .sub-nav-button');
+        const contentSections = document.querySelectorAll('.content-section');
+        const degreesNavGroup = document.getElementById('degreesNavGroup');
+        const allTabButtons = document.querySelectorAll('.tab-button');
+        const accordionToggles = document.querySelectorAll('.accordion-toggle');
+
+        function setActiveSection(targetId) {
+            contentSections.forEach(section => section.classList.toggle('active', section.id === targetId));
+            mainNavButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
+            subNavButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.target === targetId));
+            
+            const isDegreeSection = targetId.startsWith('degree-');
+            degreesNavGroup.classList.toggle('hidden', !isDegreeSection && targetId !== 'degrees-overview');
+            
+            if (isDegreeSection) {
+                document.querySelector('.main-nav-button[data-target="degrees-overview"]').classList.add('active');
+            } else if (targetId !== 'degrees-overview') {
+                 document.querySelector('.main-nav-button[data-target="degrees-overview"]').classList.remove('active');
+            }
+
+            const activeSection = document.getElementById(targetId);
+            if (activeSection) {
+                const firstTabButton = activeSection.querySelector('.tab-button');
+                const firstTabContent = activeSection.querySelector('.tab-content');
+                if (firstTabButton && firstTabContent) {
+                    activeSection.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    activeSection.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    firstTabButton.classList.add('active');
+                    firstTabContent.classList.add('active');
+                }
+            }
+            document.querySelector('main').scrollTop = 0;
+        }
+        
+        mainNavButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                setActiveSection(targetId);
+                if (targetId === 'degrees-overview') {
+                    degreesNavGroup.classList.remove('hidden');
+                    subNavButtons.forEach(btn => btn.classList.remove('active'));
+                } else if (!targetId.startsWith('degree-')) {
+                    degreesNavGroup.classList.add('hidden');
+                }
+            });
+        });
+
+        subNavButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const targetId = button.dataset.target;
+                setActiveSection(targetId);
+                degreesNavGroup.classList.remove('hidden');
+                mainNavButtons.forEach(btn => btn.classList.remove('active'));
+                document.querySelector('.main-nav-button[data-target="degrees-overview"]').classList.add('active');
+                subNavButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+        
+        allTabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTabId = button.dataset.tab;
+                const parentSection = button.closest('.content-section');
+                parentSection.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                parentSection.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.toggle('active', content.id === targetTabId);
+                });
+            });
+        });
+
+        accordionToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const content = toggle.nextElementSibling;
+                content.classList.toggle('active');
+                toggle.innerHTML = content.classList.contains('active') ? toggle.innerHTML.replace('▾', '▴') : toggle.innerHTML.replace('▴', '▾');
+            });
+        });
+
+        setActiveSection('home');
+        Chart.defaults.font.family = 'Inter';
+        Chart.defaults.color = '#334155';
+        Chart.defaults.borderColor = '#e2e8f0';
+
+        function createBarChart(ctx, label, labels, data, backgroundColors, borderColors) {
+            new Chart(ctx, {
+                type: 'bar', data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: backgroundColors, borderColor: borderColors, borderWidth: 1 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => '£' + value/1000 + 'k' } } }, plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => '£' + context.parsed.y.toLocaleString() } } } }
+            });
+        }
+        
+        function createGroupedBarChart(ctx, datasetLabels, labels, datasetsData, backgroundColors, borderColors) {
+            const datasets = datasetsData.map((data, index) => ({ label: datasetLabels[index], data: data, backgroundColor: backgroundColors[index % backgroundColors.length], borderColor: borderColors[index % borderColors.length], borderWidth: 1 }));
+            new Chart(ctx, {
+                type: 'bar', data: { labels: labels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { callback: value => '£' + value/1000 + 'k' } } }, plugins: { legend: { position: 'top', labels: { boxWidth: 20, padding: 15 } }, tooltip: { callbacks: { label: context => context.dataset.label + ': £' + context.parsed.y.toLocaleString() } } } }
+            });
+        }
+
+        const seSalaryCtx = document.getElementById('seSalaryChart')?.getContext('2d');
+        if (seSalaryCtx) createBarChart(seSalaryCtx, 'Salary (£)', ['Entry-Level', 'Mid-Career (Avg)', 'Senior/Lead'], [34000, 53000, 65000], ['#7dd3fc', '#38bdf8', '#0ea5e9'], ['#0ea5e9', '#0284c7', '#0369a1']);
+        const aimlSalaryCtx = document.getElementById('aimlSalaryChart')?.getContext('2d');
+        if (aimlSalaryCtx) createGroupedBarChart(aimlSalaryCtx, ['Academic Salary (£)', 'Industry Salary (£)'], ['PhD Student', 'Postdoc/Junior', 'Lecturer/Mid-Career', 'Professor/Senior'], [[21780, 39000, 50000, 92500], [0, 65000, 67500, 120000]], ['#7dd3fc', '#0ea5e9'], ['#0ea5e9', '#0369a1']);
+        const hwSalaryCtx = document.getElementById('hwSalaryChart')?.getContext('2d');
+        if (hwSalaryCtx) createBarChart(hwSalaryCtx, 'Salary (£)', ['Entry-Level', 'Mid-Career (Avg)', 'Senior/Experienced'], [35000, 49000, 62500], ['#7dd3fc', '#38bdf8', '#0ea5e9'], ['#0ea5e9', '#0284c7', '#0369a1']);
+        const webSalaryCtx = document.getElementById('webSalaryChart')?.getContext('2d');
+        if (webSalaryCtx) createGroupedBarChart(webSalaryCtx, ['Employed (£)', 'Freelance Equiv. (£)'], ['Junior/Entry', 'Mid-Level', 'Senior/Experienced'], [[24000, 34500, 43500], [37381, 38098, 40390]], ['#7dd3fc', '#0ea5e9'], ['#0ea5e9', '#0369a1']);
+        const gameSalaryCtx = document.getElementById('gameSalaryChart')?.getContext('2d');
+        if (gameSalaryCtx) createGroupedBarChart(gameSalaryCtx, ['Game Programmer (£)', 'Game Designer (£)', 'Game Artist (£)'], ['Junior/Entry', 'Mid-Career', 'Senior/Lead'], [[30750, 40500, 60000], [26250, 42250, 65500], [21500, 37500, 35000]], ['#7dd3fc', '#38bdf8', '#0ea5e9'], ['#0ea5e9', '#0284c7', '#0369a1']);
+
+    </script>
+</body>
+</html>
