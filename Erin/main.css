@@ -19,6 +19,7 @@ body {
     background-size: cover;
     margin: 0;
     height: 400px;
+    width: 100%;
     display: grid;
     align-items: center;
     justify-content: center;
@@ -47,15 +48,33 @@ body {
 }
 
 #contact {
-    color: var(--text-color);
-    float: right;
-    padding: 20px;
-    width: 20%;
-    margin-top: -20px;
-    margin-right: -5px;
-    background-color: var(--dark-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 5px;
+   color: var(--text-color);
+   padding: 20px;
+   background-color: var(--dark-bg);
+   border: 2px solid var(--border-color);
+}
+
+@media only screen and (width >= 1300px) {
+  #contact {
+      float: right;
+      width: 20%;
+      margin-top: -20px;
+      margin-right: -5px;
+      border-radius: 5px;
+  }
+}
+
+@media only screen and (width < 1300px) {
+  #contact {
+      width: calc(100% - 38px);
+      margin-top: -20px;
+      margin-right: -5px;
+      margin-left:  -5px;
+      text-align: center;
+      border-right: 0px;
+  }
+
+
 }
 
 .mail {

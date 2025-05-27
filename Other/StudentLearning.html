@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Student Learning Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Section I: Foundational Principles - Table 1 (HTML table) for summary; Bar chart (Chart.js) to visualize comparative benefits (e.g., impact on retention). Goal: Compare, Inform. Interaction: Tabs for level-specific text.
+        - Section II: Integrating Principles - HTML/CSS diagram for daily routine cycle. Goal: Organize, Inform. Interaction: Accordions for subject-specific adaptations.
+        - Section III: Advanced Strategies - Table 2 (HTML table). HTML/CSS visual for mind map structure. Goal: Inform, Organize. Interaction: Tabs for level-specific text.
+        - Section IV: Learning Ecosystem - Interactive HTML checklist for physical environment. Unicode icons for digital tool categories. Goal: Inform, Guide.
+        - Section V: Self-Awareness - HTML/CSS flowchart for Metacognition cycle; Donut chart (Chart.js) for SRL components. Goal: Inform, Visualize Process/Structure.
+        - Section VI: Holistic Learner - Bar charts (Chart.js) for sleep & exercise recommendations; HTML/CSS list with icons for brain foods. Goal: Inform, Compare.
+        - All textual content adapted from report, placed in relevant sections with introductory paragraphs. Interactions like tabs/accordions to manage content display.
+        - Justification: Visualizations chosen to simplify complex data/processes and enhance engagement. Interactions designed to allow progressive disclosure of information and cater to different user needs (e.g., academic level).
+        - Library/Method: Chart.js for charts. Vanilla JS for UI interactions. HTML/CSS for static diagrams/visuals.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Inter font from Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        .tab-button.active {
+            border-color: #0ea5e9; /* sky-500 */
+            background-color: #e0f2fe; /* sky-100 */
+            color: #0369a1; /* sky-700 */
+        }
+        .tab-button {
+            transition: all 0.3s ease-in-out;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Default max-width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Default height */
+            max-height: 400px; /* Default max-height */
+        }
+        /* Responsive chart container heights */
+        @media (min-width: 640px) { /* sm */
+            .chart-container {
+                height: 350px;
+                max-height: 450px;
+            }
+        }
+        @media (min-width: 1024px) { /* lg */
+            .chart-container {
+                height: 400px;
+                max-height: 500px;
+            }
+        }
+        .nav-link.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+        }
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* slate-300 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* slate-400 */
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #334155; /* slate-700 */
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the text */
+            left: 50%;
+            margin-left: -100px; /* Use half of the width (200/2 = 100), to center the tooltip */
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.875rem;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 flex flex-col md:flex-row min-h-screen">
+
+    <nav id="sidebar" class="bg-stone-200 w-full md:w-64 p-4 space-y-2 fixed md:sticky top-0 h-16 md:h-screen overflow-y-auto shadow-lg z-20 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
+        <div class="flex justify-between items-center md:block">
+            <h1 class="text-xl font-bold text-sky-700">Learning Guide</h1>
+            <button id="menu-toggle-close" class="md:hidden text-stone-700 hover:text-sky-600">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+        <a href="#introduction" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Introduction</a>
+        <a href="#foundational-principles" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Foundational Principles</a>
+        <a href="#integrating-principles" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Integrating Principles</a>
+        <a href="#advanced-strategies" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Advanced Strategies</a>
+        <a href="#learning-ecosystem" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Learning Ecosystem</a>
+        <a href="#self-awareness" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Self-Awareness</a>
+        <a href="#holistic-learner" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Holistic Learner</a>
+        <a href="#conclusion" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Conclusion</a>
+    </nav>
+
+    <main class="flex-1 p-4 md:p-8 pt-20 md:pt-8 overflow-y-auto">
+        <button id="menu-toggle-open" class="md:hidden fixed top-4 left-4 z-30 bg-stone-200 p-2 rounded shadow text-stone-700 hover:text-sky-600">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+        </button>
+
+        <section id="introduction" class="content-section active mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">The Ultimate Student's Guide to Mastering Learning</h2>
+            <p class="mb-4 text-lg leading-relaxed">Welcome to your interactive guide to mastering learning! The modern academic landscape demands more than just hard work; it requires smart, effective strategies. This application translates the comprehensive "Ultimate Student's Guide" into an engaging experience, helping you understand and apply scientifically-backed techniques for GCSE, A-Level, and University success.</p>
+            <p class="text-lg leading-relaxed">Here, you'll explore foundational learning principles, advanced revision methods, how to optimize your study environment, the power of self-awareness in learning, and the crucial role of lifestyle factors. Navigate through the sections to discover how to transform your study habits, enhance comprehension, and unlock your full academic potential. Let's begin your journey to becoming a more effective and confident learner!</p>
+        </section>
+
+        <section id="foundational-principles" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">I. Unlocking Your Brain's Potential: Foundational Learning Principles</h2>
+            <p class="mb-6 text-lg leading-relaxed">This section explores core learning principles rooted in cognitive psychology. Understanding these principles is the first step towards transforming study habits from rote memorization to meaningful, long-lasting learning. Discover the "why" behind their effectiveness and the "how" to apply them across your academic journey. These are not just study "tips," but fundamental approaches to how you interact with and internalize information.</p>
+
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. Active Recall: The Science of Retrieving Knowledge</h3>
+                    <p class="mb-2"><strong>Definition:</strong> Actively stimulating memory by challenging yourself to remember information without referring to notes or source materials. It's about pulling information <em>out</em> of memory.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Mechanisms & Effectiveness +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <p>The power of active recall lies in its direct impact on neural pathways. Each retrieval strengthens these connections, making future recall easier. This "testing effect" transfers information to long-term memory. Even unsuccessful attempts enhance subsequent learning. It shifts you from passive absorption to active engagement, fostering deeper understanding.</p>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Practical Implementation:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ar-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ar-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ar-uni">University</button>
+                        </div>
+                        <div id="ar-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Use flashcards for vocabulary, dates, definitions, formulas.</li>
+                                <li>Answer end-of-chapter questions without looking back.</li>
+                                <li>Create simple quizzes from class notes.</li>
+                                <li>Example: A History student recalls main causes of WWII from memory.</li>
+                            </ul>
+                        </div>
+                        <div id="ar-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Generate your own exam-style questions focusing on application/analysis.</li>
+                                <li>Work through past papers under timed conditions, without notes.</li>
+                                <li>Summarize complex theories or processes in your own words from memory.</li>
+                                <li>Example: A Chemistry student writes out an organic reaction mechanism from memory.</li>
+                            </ul>
+                        </div>
+                        <div id="ar-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Practice constructing complex essay arguments from memory.</li>
+                                <li>Explain intricate theories or research methodologies to others.</li>
+                                <li>Pre-test knowledge before engaging with dense academic papers.</li>
+                                <li>Example: A Law student actively recalls key arguments and principles from a landmark case.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Spaced Repetition: Mastering Information Over Time</h3>
+                    <p class="mb-2"><strong>Definition:</strong> Reviewing material at systematically increasing intervals to combat the "forgetting curve" and reinforce memory just before you're likely to forget it.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Mechanisms & Effectiveness +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <p>Spaced repetition counteracts the natural decline in memory. Intervals allow for memory consolidation, transferring information to long-term storage. Reviewing at different times creates richer retrieval cues (Encoding Variability). Each review is an active recall attempt, strengthening the memory trace. It allows time for molecular processes underpinning long-term memory. The "desirable difficulty" of recalling after a delay leads to more significant long-term gains.</p>
+                    </div>
+                     <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Practical Implementation:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="sr-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="sr-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="sr-uni">University</button>
+                        </div>
+                        <div id="sr-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Simple schedules: review new French vocabulary next day, 3 days later, then a week later.</li>
+                                <li>Leitner system for physical flashcards (correct cards reviewed less frequently).</li>
+                                <li>Example: A Maths student reviews formulas daily, then every few days, then weekly.</li>
+                            </ul>
+                        </div>
+                        <div id="sr-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Use digital tools (Anki, Quizlet) to automate schedules for complex concepts.</li>
+                                <li>Plan revision timetables incorporating spaced review sessions for different modules.</li>
+                                <li>Example: A Biology student inputs key concepts into Anki for scheduled review.</li>
+                            </ul>
+                        </div>
+                        <div id="sr-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <ul class="list-disc list-inside space-y-1">
+                                <li>Create comprehensive digital flashcard decks for core theories, terminology, legal precedents.</li>
+                                <li>Utilize adaptive spaced repetition software for vast amounts of information.</li>
+                                <li>Example: A Medical student uses spaced repetition for anatomy, drug interactions over years of study.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">C. Interleaving: The Power of Mixed Practice</h3>
+                    <p class="mb-2"><strong>Definition:</strong> Mixing or alternating different topics or types of problems within a single study session, rather than focusing on one topic exhaustively (blocked practice).</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Mechanisms & Effectiveness +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <p>Interleaving helps learners better distinguish between different concepts by forcing comparison and contrast (Enhanced Discrimination). The "contextual interference" from switching material promotes deeper cognitive processing. It forces active retrieval of appropriate knowledge for each new item and improves the ability to learn *when* to use a particular strategy or formula, a crucial skill for exams.</p>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Practical Implementation:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="il-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="il-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="il-uni">University</button>
+                        </div>
+                        <div id="il-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Alternate between algebra, geometry, and probability problems in one Maths session.</li>
+                                <li>Mix questions on cell biology, chemical reactions, and physics principles in science revision.</li>
+                                <li>Spend 15-20 mins on one topic, then switch, then cycle back.</li>
+                            </ul>
+                        </div>
+                        <div id="il-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Interleave microeconomic theories with macroeconomic concepts in Economics.</li>
+                                <li>Mix study of different organic reaction mechanisms in Chemistry.</li>
+                                <li>Actively look for connections and differences between interleaved topics.</li>
+                            </ul>
+                        </div>
+                        <div id="il-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <ul class="list-disc list-inside space-y-1">
+                                <li>Interleave chapters on different schools of thought in Psychology (e.g., behaviorism, cognitivism).</li>
+                                <li>Tackle a series of engineering design problems requiring distinct analytical tools.</li>
+                                <li>Compare and contrast different research methodologies when reviewing literature.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">D. Elaborative Interrogation: Deepening Understanding by Asking "Why"</h3>
+                    <p class="mb-2"><strong>Definition:</strong> Actively generating explanations for why an explicitly stated fact, concept, or principle is true, typically by asking "Why?" questions.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Mechanisms & Effectiveness +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <p>This strategy promotes deeper processing by integrating new information with prior knowledge. Asking "why" compels you to search memory for related concepts, making new information more meaningful and memorable. It helps discern similarities and differences between ideas and organizes knowledge more coherently. The effort in generating explanations is more beneficial than passively receiving them.</p>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Practical Implementation:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ei-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ei-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="ei-uni">University</button>
+                        </div>
+                        <div id="ei-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Science: "An ice cube melts in your hand." Ask: "Why does it melt?" (Heat transfer).</li>
+                                <li>English Lit: "The witches plan to meet Macbeth after the battle." Ask: "Why *after* the battle?" (Motives, plot).</li>
+                            </ul>
+                        </div>
+                        <div id="ei-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Geography: "Why is hydraulic action significant on this coastline?"</li>
+                                <li>Economics: "Why might this policy lead to these economic consequences?"</li>
+                            </ul>
+                        </div>
+                        <div id="ei-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <ul class="list-disc list-inside space-y-1">
+                                <li>Philosophy: "Why are these premises essential for this conclusion?"</li>
+                                <li>Research: "Why this methodology? What are alternative explanations for these findings?"</li>
+                                <li>Medicine: "Why does this physiological change occur in this disease state?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-4">Foundational Learning Principles: Benefits Overview</h3>
+                    <p class="mb-4">The following chart illustrates the relative impact of foundational learning principles on key aspects of learning, based on the concepts discussed in the report. This is a qualitative representation to help you understand their strengths.</p>
+                    <div class="chart-container">
+                        <canvas id="foundationalPrinciplesChart"></canvas>
+                    </div>
+                    <p class="text-sm text-stone-600 mt-2 text-center">This chart visualizes the general effectiveness. Individual results may vary based on application and subject.</p>
+                </div>
+
+                 <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">Table 1: Foundational Learning Principles at a Glance</h3>
+                    <table class="min-w-full divide-y divide-stone-200">
+                        <thead class="bg-stone-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Principle</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Core Cognitive Mechanism</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Key Benefits</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">GCSE Example</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">A-Level Example</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">University Example</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-stone-200">
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Active Recall</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Strengthens neural pathways via effortful retrieval; "testing effect" moves info to long-term memory.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Improved long-term retention, better understanding, identifies knowledge gaps.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Flashcards for historical dates (Battle of Hastings).</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Answering past physics questions (electromagnetism) from memory.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Explaining Foucault's power/knowledge theory to a peer.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Spaced Repetition</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Combats forgetting curve by reviewing at increasing intervals; enhances memory consolidation.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Improved long-term retention, more efficient than cramming.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">1, 3, 7-day review for Spanish vocabulary.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Anki for A-Level Biology concepts (enzyme kinetics).</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Systematic review of legal cases throughout a law degree.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Interleaving</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Enhances discrimination by mixing topics/problem types; strengthens memory.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Better concept differentiation, problem-solving, transfer of learning.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Mixing algebra, geometry, number problems in Maths revision.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Alternating poetic forms/literary periods in English Lit.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Interleaving study of related physiological systems in medicine.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Elaborative Interrogation</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Deeper understanding by explaining "why" facts/concepts are true; integrates new info with prior knowledge.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Deeper comprehension, stronger memory traces, better knowledge organization.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Asking "Why did the Industrial Revolution start in Britain?".</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Asking "Why does this chemical reaction proceed via this mechanism?".</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Asking "Why does this philosopher's argument rely on this premise?".</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="integrating-principles" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">II. Integrating Foundational Principles into Your Academic Life</h2>
+            <p class="mb-6 text-lg leading-relaxed">Understanding these principles is one thing; weaving them into your daily academic activities is what truly transforms learning. This section offers guidance on tailoring these techniques for different academic stages and subjects, and embedding them into your study routines, lecture engagement, and independent learning. Mastering these early can smooth your transition to higher academic levels.</p>
+
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. Tailoring Techniques for GCSE, A-Level, and University Demands</h3>
+                    <p class="mb-4">Cognitive demands evolve. Adapt your strategies accordingly.</p>
+                    <div class="tabs mb-1">
+                        <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="it-gcse">GCSE</button>
+                        <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="it-alevel">A-Level</button>
+                        <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="it-uni">University</button>
+                    </div>
+                    <div id="it-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                        <p class="font-medium mb-2">Focus: Broad factual knowledge, basic concepts.</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Active Recall:</strong> Simple flashcards (definitions, dates), end-of-chapter questions.</li>
+                            <li><strong>Spaced Repetition:</strong> Manual schedules for formulas, key quotes.</li>
+                            <li><strong>Interleaving:</strong> Mix questions from different science topics (bio, chem, phys).</li>
+                            <li><strong>Elaborative Interrogation:</strong> Simple "why" questions (e.g., "Why is this event significant?").</li>
+                        </ul>
+                    </div>
+                    <div id="it-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                        <p class="font-medium mb-2">Focus: Deeper conceptual understanding, application, early critical analysis.</p>
+                         <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Active Recall:</strong> Recall arguments, processes; generate exam-style questions; past papers.</li>
+                            <li><strong>Spaced Repetition:</strong> Digital tools (Anki) for detailed info, complex definitions.</li>
+                            <li><strong>Interleaving:</strong> Mix problem types in Maths; interleave themes/periods in History.</li>
+                            <li><strong>Elaborative Interrogation:</strong> More complex "why/how" (e.g., "Why this economic model's assumptions?").</li>
+                        </ul>
+                    </div>
+                    <div id="it-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                        <p class="font-medium mb-2">Focus: Advanced critical thinking, synthesis, independent research, original arguments.</p>
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Active Recall:</strong> Construct essay plans/arguments from memory; recall key readings for seminars.</li>
+                            <li><strong>Spaced Repetition:</strong> Essential for vast specialized knowledge (medicine, law); use for theories, methodologies.</li>
+                            <li><strong>Interleaving:</strong> For synoptic exams/literature reviews, compare different theories/research papers.</li>
+                            <li><strong>Elaborative Interrogation:</strong> Critically engage with literature ("Why this methodology? Unstated assumptions?").</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Subject-Specific Adaptations</h3>
+                    <p class="mb-4">Nuance your application of principles based on subject nature.</p>
+                    <div>
+                        <button class="accordion-toggle w-full text-left bg-stone-200 hover:bg-stone-300 p-3 rounded font-medium mb-1">Sciences (Physics, Chemistry, Biology) +</button>
+                        <div class="accordion-content bg-stone-50 p-3 rounded mb-2">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Active Recall:</strong> Solve problems without examples; draw complex diagrams from memory.</li>
+                                <li><strong>Spaced Repetition:</strong> Memorize formulas, definitions, steps in processes.</li>
+                                <li><strong>Interleaving:</strong> Mix problem types (mechanics, thermodynamics, electromagnetism).</li>
+                                <li><strong>Elaborative Interrogation:</strong> "Why does this law hold true?" "How does structure relate to function?".</li>
+                            </ul>
+                        </div>
+                        <button class="accordion-toggle w-full text-left bg-stone-200 hover:bg-stone-300 p-3 rounded font-medium mb-1">Mathematics +</button>
+                        <div class="accordion-content bg-stone-50 p-3 rounded mb-2">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Active Recall:</strong> Solve problems from scratch; re-derive proofs/formulas.</li>
+                                <li><strong>Spaced Repetition:</strong> Review techniques, theorems, application conditions.</li>
+                                <li><strong>Interleaving:</strong> Crucial; mix algebra, calculus, trigonometry, statistics problems.</li>
+                                <li><strong>Elaborative Interrogation:</strong> "Why is this theorem true?" "Why is this proof step necessary?".</li>
+                            </ul>
+                        </div>
+                        <button class="accordion-toggle w-full text-left bg-stone-200 hover:bg-stone-300 p-3 rounded font-medium mb-1">Humanities (History, Literature, Philosophy) +</button>
+                        <div class="accordion-content bg-stone-50 p-3 rounded mb-2">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Active Recall:</strong> Outline essay arguments, recall evidence/dates, summarize themes from memory.</li>
+                                <li><strong>Spaced Repetition:</strong> Key dates, figures, literary terms, philosophical definitions, quotes.</li>
+                                <li><strong>Interleaving:</strong> Switch historical periods, literary genres, critical theories.</li>
+                                <li><strong>Elaborative Interrogation:</strong> "Why these historical events/causes?" "Why this critical interpretation?".</li>
+                            </ul>
+                        </div>
+                        <button class="accordion-toggle w-full text-left bg-stone-200 hover:bg-stone-300 p-3 rounded font-medium mb-1">Languages +</button>
+                        <div class="accordion-content bg-stone-50 p-3 rounded">
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Active Recall:</strong> Vocabulary tests, grammar drills from memory, forming sentences without scripts.</li>
+                                <li><strong>Spaced Repetition:</strong> Highly effective for vocabulary and grammar rules (use SRS apps).</li>
+                                <li><strong>Interleaving:</strong> Mix grammatical tenses, vocabulary sets, sentence structures.</li>
+                                <li><strong>Elaborative Interrogation:</strong> "Why this grammatical structure here?" "Why this word connotation?".</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">C. Daily Routines, Lecture Engagement, Independent Learning</h3>
+                    <p class="mb-4">Integrate principles into your daily academic rhythm for continuous learning.</p>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-sky-50 p-4 rounded">
+                            <h4 class="font-semibold text-lg text-sky-700 mb-2">Daily Study Routines</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li>Short, frequent sessions over marathon cramming.</li>
+                                <li>Start with 5-10 min active recall of previous day's material.</li>
+                                <li>Schedule spaced review of older material weekly.</li>
+                                <li>Deliberately interleave subjects/topics daily.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-sky-50 p-4 rounded">
+                            <h4 class="font-semibold text-lg text-sky-700 mb-2">Lecture Engagement</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li><strong>Before:</strong> Briefly pre-read; formulate questions.</li>
+                                <li><strong>During:</strong> Listen actively; mentally summarize; jot notes in own words.</li>
+                                <li><strong>After (within 24hrs):</strong> Review notes using active recall; transform notes into questions.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-sky-50 p-4 rounded">
+                            <h4 class="font-semibold text-lg text-sky-700 mb-2">Independent Learning</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li>Make active recall your default (self-testing, flashcards).</li>
+                                <li>Constantly ask "why" & "how" when reading.</li>
+                                <li>Strategically interleave topics or problem types.</li>
+                                <li>Combine principles (e.g., active recall then elaboration).</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="mt-6 p-4 border border-sky-300 rounded-lg bg-sky-50">
+                        <h4 class="font-semibold text-lg text-sky-700 mb-2 text-center">Visualizing an Effective Daily Study Cycle</h4>
+                        <div class="flex flex-col sm:flex-row justify-around items-center text-center text-sm">
+                            <div class="p-2 m-1 rounded bg-white shadow"><strong>1. Plan & Prepare</strong><br/>(Set goals, gather materials)</div>
+                            <div class="text-sky-600 font-bold text-2xl mx-1">&rarr;</div>
+                            <div class="p-2 m-1 rounded bg-white shadow"><strong>2. Active Learning Session</strong><br/>(Recall, Interleave, Elaborate)</div>
+                            <div class="text-sky-600 font-bold text-2xl mx-1 hidden sm:block">&rarr;</div>
+                             <div class="text-sky-600 font-bold text-2xl my-1 sm:hidden">&darr;</div>
+                            <div class="p-2 m-1 rounded bg-white shadow"><strong>3. Immediate Review</strong><br/>(Summarize, identify gaps)</div>
+                            <div class="text-sky-600 font-bold text-2xl mx-1">&rarr;</div>
+                            <div class="p-2 m-1 rounded bg-white shadow"><strong>4. Scheduled Spaced Review</strong><br/>(Revisit at intervals)</div>
+                        </div>
+                        <p class="text-xs text-stone-600 mt-3 text-center">This simple cycle helps embed learning principles into your daily habits for better retention and understanding.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="advanced-strategies" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">III. Advanced Strategies for Robust Revision and Long-Term Retention</h2>
+            <p class="mb-6 text-lg leading-relaxed">Beyond foundational principles, specific techniques offer structured ways to apply them for even more powerful learning. These advanced strategies often combine multiple cognitive principles to foster deep understanding, critical analysis, and durable memory. Explore these methods to elevate your revision and retention capabilities.</p>
+            
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. The Feynman Technique: Explaining to Understand</h3>
+                    <p class="mb-2"><strong>Core Principle:</strong> True understanding is shown by explaining a concept in simple terms, as if to a child. Cycle: Choose concept &rarr; Teach it simply &rarr; Identify gaps &rarr; Review & simplify further.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Principles & Benefits +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Active Recall:</strong> Explaining from understanding is potent retrieval.</li>
+                            <li><strong>Elaboration & Simplification:</strong> Breaking down concepts and using analogies solidifies understanding.</li>
+                            <li><strong>Identifies Knowledge Gaps:</strong> Getting stuck or using jargon reveals areas not truly comprehended.</li>
+                            <li><strong>Deeper Comprehension:</strong> Reconstructing knowledge in simplified form cultivates flexible understanding.</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Adapting for Levels:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="feynman-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="feynman-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="feynman-uni">University</button>
+                        </div>
+                        <div id="feynman-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <p>Explain basic scientific processes (photosynthesis) or historical events (Norman Conquest) in jargon-free paragraphs. Focus on clear definitions, basic cause-effect. Example: Explain Pythagorean theorem simply.</p>
+                        </div>
+                        <div id="feynman-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <p>Explain intricate theories (market failure in Economics) or processes (DNA replication in Biology) using analogies. More nuance, but still clear. Example: "Teach" main arguments for a History essay.</p>
+                        </div>
+                        <div id="feynman-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <p>Deconstruct complex philosophical arguments, sociological theories, or advanced scientific principles (quantum mechanics). "Teach" to a peer from a different discipline. Example: Explain post-structuralism in literature simply.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Blurting: The Power of Unfiltered Recall</h3>
+                    <p class="mb-2"><strong>Core Principle:</strong> Rapidly write/speak everything remembered about a topic (unfiltered "brain dump"), then compare to source material to find gaps and inaccuracies for targeted re-study.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Benefits +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Rapid Gap Identification:</strong> Immediately shows what's known vs. unknown.</li>
+                            <li><strong>Strengthens Neural Pathways:</strong> Multimodal engagement (speaking, writing).</li>
+                            <li><strong>Potential Elaboration:</strong> May naturally connect ideas during recall.</li>
+                            <li><strong>Reduces Passive Review:</strong> Forces active engagement.</li>
+                            <li><strong>Lowers Revision Anxiety:</strong> Permission for messiness reduces barriers to starting.</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Adapting for Levels:</h4>
+                         <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="blurting-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="blurting-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="blurting-uni">University</button>
+                        </div>
+                        <div id="blurting-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <p>Blurt info for specific topics. Example: Geography student blurts all known coastal landforms, erosion types, case study details. Maths student blurts formulas for quadratic equations.</p>
+                        </div>
+                        <div id="blurting-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <p>Blurt entire problem-solving processes (Physics mechanics problem) or all factors/arguments for an essay topic (causes of a revolution in History). Scope: specific chapter, detailed concept.</p>
+                        </div>
+                        <div id="blurting-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <p>Use for highly complex topics. Example: Philosophy student blurts central arguments of a dense text. Biology student blurts intricate details of DNA replication. Greater depth and breadth expected.</p>
+                        </div>
+                        <p class="mt-3 text-sm text-stone-600"><strong>Process:</strong> 1. Familiarize. 2. Recall (timed, no notes). 3. Compare & Correct (use different color). 4. Refocus & Repeat.</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">C. Mind Mapping: Visualizing Knowledge and Connections</h3>
+                    <p class="mb-2"><strong>Core Principle:</strong> A non-linear visual diagram starting with a central idea, with themes radiating as branches, and sub-branches for details. Uses colors, images, keywords to mirror associative thinking.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Cognitive Benefits +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Enhanced Memory/Recall:</strong> Leverages visual memory (keywords, colors, images, spatial layout).</li>
+                            <li><strong>Visual Learning & Dual Coding:</strong> Engages verbal and visual channels for stronger encoding.</li>
+                            <li><strong>Improved Organization:</strong> Clear hierarchical overview, shows "big picture" and details.</li>
+                            <li><strong>Reduced Cognitive Load:</strong> Organizes info spatially, uses visual cues (if not cluttered).</li>
+                            <li><strong>Fosters Creativity/Critical Thinking:</strong> Encourages brainstorming, making new connections visible.</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Adapting for Levels:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="mm-gcse">GCSE</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="mm-alevel">A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="mm-uni">University</button>
+                        </div>
+                        <div id="mm-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <p>Brainstorm essay ideas, summarize key facts (The Cold War, Macbeth characters), learn vocabulary/quotes. Simpler maps, core facts, direct relationships. Example: Biology map for "Variation and Evolution."</p>
+                        </div>
+                        <div id="mm-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                            <p>For more complex topics, detailed planning. Example: Computer Science map for "Computational Thinking." History essay plan for "Benjamin Franklin" with main aspects and detailed evidence.</p>
+                        </div>
+                        <div id="mm-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <p>Deconstruct complex theories, plan research papers, synthesize multiple sources. Example: Medical students map physiological concepts. Represent abstract relationships. Clarity is key.</p>
+                        </div>
+                    </div>
+                     <div class="mt-6 p-4 border border-sky-300 rounded-lg bg-sky-50">
+                        <h4 class="font-semibold text-lg text-sky-700 mb-2 text-center">Basic Mind Map Structure</h4>
+                        <div class="flex justify-center items-center">
+                            <div class="relative p-4">
+                                <div class="absolute inset-0 flex justify-center items-center">
+                                    <div class="w-24 h-16 bg-amber-400 rounded-lg flex justify-center items-center text-center text-sm font-semibold shadow-md">Central Topic</div>
+                                </div>
+                                <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="absolute w-1 h-12 bg-stone-400 transform rotate-45 -translate-y-10 -translate-x-12"></div>
+                                    <div class="absolute w-20 h-10 bg-sky-200 rounded-md flex justify-center items-center text-xs shadow transform -translate-y-20 -translate-x-28">Main Idea 1</div>
+                                    
+                                    <div class="absolute w-1 h-12 bg-stone-400 transform -rotate-45 -translate-y-10 translate-x-12"></div>
+                                    <div class="absolute w-20 h-10 bg-sky-200 rounded-md flex justify-center items-center text-xs shadow transform -translate-y-20 translate-x-8">Main Idea 2</div>
+
+                                    <div class="absolute w-12 h-1 bg-stone-400 transform translate-x-10 translate-y-0.5"></div>
+                                     <div class="absolute w-20 h-10 bg-sky-200 rounded-md flex justify-center items-center text-xs shadow transform translate-x-24 -translate-y-5">Main Idea 3</div>
+                                </div>
+                                <div class="h-32 w-full"></div> </div>
+                        </div>
+                        <p class="text-xs text-stone-600 mt-1 text-center">A mind map visually organizes information. Start with a central topic, branch out to main ideas, then to sub-details. Use keywords, colors, and images to enhance memory and connections.</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">D. Crafting and Utilizing Effective Flashcards</h3>
+                    <p class="mb-2"><strong>Core Principle:</strong> Versatile tool, effectiveness hinges on creation and use. One concept per card, question/prompt on one side, answer on other. Best with spaced repetition (Leitner System).</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Principles of Effective Design +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Simplicity & Focus:</strong> One piece of info per card.</li>
+                            <li><strong>Active Recall Prompt:</strong> Question/term on one side, answer on other.</li>
+                            <li><strong>Own Words:</strong> Paraphrase info for deeper processing.</li>
+                            <li><strong>Visuals & Color:</strong> Enhance memory, differentiate topics.</li>
+                            <li><strong>Conciseness:</strong> Brief, to the point; keywords/bullet points.</li>
+                            <li><strong>Mnemonics:</strong> Incorporate aids for lists/sequences.</li>
+                        </ul>
+                    </div>
+                     <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Adapting for Levels & Content:</h4>
+                        <div class="tabs mb-1">
+                            <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="fc-gcse">GCSE/A-Level</button>
+                            <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="fc-uni">University</button>
+                        </div>
+                        <div id="fc-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                            <p class="font-medium mb-1">Primarily Factual Recall & Basic Concepts:</p>
+                            <ul class="list-disc list-inside text-sm">
+                                <li>Vocabulary, dates, scientific definitions/formulas, literary terms, math equations.</li>
+                                <li>Example (Maths): Quadratic formula on one side, name/application on other.</li>
+                                <li>Example (History): "1066" on one side, "Battle of Hastings" on other.</li>
+                            </ul>
+                        </div>
+                        <div id="fc-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                           <p class="font-medium mb-1">Supporting Critical Analysis & Theoretical Knowledge:</p>
+                           <ul class="list-disc list-inside text-sm">
+                               <li>Prompt deeper thinking: "Core assumptions & criticism of Theory X?" not just "Define Theory X."</li>
+                               <li>Critical thinking prompts: Logical fallacies (name on one side, definition/example on other).</li>
+                               <li>Argument structure (Humanities/Law): Prompts for claims, evidence, legal reasoning.</li>
+                               <li>Sociological/Philosophical theories: Compare/contrast, key theorists, implications.</li>
+                           </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">E. Developing Powerful Summary Notes</h3>
+                    <p class="mb-2"><strong>Core Principle:</strong> More than shorter texts; crafted tools for understanding. Process of creation is active learning. Distill info, rephrase in own words, organize logically.</p>
+                    <button class="accordion-toggle text-amber-600 hover:text-amber-700 font-medium mb-2">Show Techniques for Condensing & Structuring +</button>
+                    <div class="accordion-content bg-stone-50 p-3 rounded mt-2">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li><strong>Condensation & Selection:</strong> Distill to most important "nuggets." Filter non-critical details.</li>
+                            <li><strong>Rephrasing:</strong> Write in own words to ensure understanding.</li>
+                            <li><strong>Organization:</strong> Use folders, consistent formatting (headings, color).</li>
+                            <li><strong>Cornell Note-Taking:</strong> Cues (left), Detailed notes (right), Summary (bottom).</li>
+                            <li><strong>Visual Layouts:</strong> Bullet points, diagrams, tables, mind maps. Color-code (sparingly).</li>
+                            <li><strong>Iterative Condensation:</strong> Refine detailed notes into summaries, then into keyword triggers.</li>
+                        </ul>
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="text-xl font-medium text-stone-700 mb-2">Adapting for Conceptual Understanding (especially University):</h4>
+                         <p class="p-3 bg-sky-50 rounded">
+                            University notes must move beyond description to facilitate analysis and evaluation of arguments, theories, and evidence. They should help deconstruct complex texts, compare perspectives, question assumptions, and synthesize informed ideas. For sciences, map conceptual structures. For maths, outline problem-solving strategies and proof techniques. For humanities/social sciences, define core concepts, compare theorists, and critically examine evidence. Include critical questions directed at source material.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">Table 2: Advanced Revision and Retention Techniques</h3>
+                    <table class="min-w-full divide-y divide-stone-200">
+                        <thead class="bg-stone-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Technique</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Brief Description</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Primary Cognitive Benefit(s)</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Best For</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-stone-200">
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Feynman Technique</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Explain simply (like to a child), find gaps, review, simplify.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Deep conceptual understanding, simplification, gap identification, active recall, elaboration.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Complex/abstract concepts, true comprehension beyond jargon.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Blurting</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Rapidly write/speak all remembered info, compare to source.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Rapid gap identification, active recall, strengthens neural pathways.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Quick knowledge assessment, pinpointing weak areas, overcoming "blank page" anxiety.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Mind Mapping</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Visually organize info around central concept with branches, colors, images.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Enhanced memory (visual/dual coding), organization, creativity, critical thinking, reduced cognitive load.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Brainstorming, summarizing, showing relationships, planning essays.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Effective Flashcards</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Single concept per card, question/prompt one side, answer other (own words), use with SRS.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Active recall, spaced repetition for long-term memory, focused learning.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Memorizing facts, vocab, definitions, formulas; adapting for conceptual questions.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-stone-900">Powerful Summary Notes</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Condense/structure info in own words (Cornell, diagrams), iterative refinement.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Deep processing, organization, key info identification, active recall during creation/review.</td>
+                                <td class="px-4 py-3 text-sm text-stone-500">Consolidating large info amounts, understanding complex relationships, critical analysis.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="learning-ecosystem" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">IV. Engineering Your Ideal Learning Ecosystem</h2>
+            <p class="mb-6 text-lg leading-relaxed">Effective learning isn't just about internal strategies; your external environment plays a critical role. This section guides you in optimizing your physical and digital study spaces to minimize distractions and leverage tools for focus and productivity. You'll also learn about critically evaluating online resources, an essential skill for modern learners.</p>
+
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. Optimizing Your Physical Study Environment</h3>
+                    <p class="mb-4">A conducive physical space enhances concentration and learning. Consider ergonomics, lighting, noise, and organization.</p>
+                    <div id="physical-env-checklist" class="space-y-3">
+                        <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-ergonomics" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-ergonomics" class="flex-1 cursor-pointer">
+                                <strong>Desk & Chair Ergonomics:</strong> Neutral posture, feet flat, good back support.
+                                <span class="block text-xs text-stone-500">Adjust chair/desk height, use footrest if needed.</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-screen" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-screen" class="flex-1 cursor-pointer">
+                                <strong>Screen Position:</strong> Top of screen at/below eye level, arm's length away.
+                                <span class="block text-xs text-stone-500">Use risers; consider external monitor/keyboard for laptops.</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-lighting" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-lighting" class="flex-1 cursor-pointer">
+                                <strong>Lighting:</strong> Bright but not harsh; prioritize natural light; task lighting for reading.
+                                <span class="block text-xs text-stone-500">Desk near window; avoid glare on screens.</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-noise" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-noise" class="flex-1 cursor-pointer">
+                                <strong>Noise Level:</strong> Quiet, free from interruptions.
+                                <span class="block text-xs text-stone-500">Low-traffic area; use headphones or instrumental/white noise if needed.</span>
+                            </label>
+                        </div>
+                        <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-clutter" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-clutter" class="flex-1 cursor-pointer">
+                                <strong>Organization/Clutter:</strong> Minimal clutter on desk and in visual field.
+                                 <span class="block text-xs text-stone-500">Keep essentials on desk; tidy after each session; use organizers.</span>
+                            </label>
+                        </div>
+                         <div class="flex items-center p-3 bg-stone-50 rounded hover:bg-stone-100 transition-colors">
+                            <input type="checkbox" id="chk-personalization" class="h-5 w-5 text-amber-500 border-stone-300 rounded focus:ring-amber-400 mr-3">
+                            <label for="chk-personalization" class="flex-1 cursor-pointer">
+                                <strong>Personalization:</strong> Inviting, motivating, reflects study needs.
+                                 <span class="block text-xs text-stone-500">Add plants, inspiring art, relevant diagrams; ensure fresh air.</span>
+                            </label>
+                        </div>
+                    </div>
+                    <p class="text-sm text-stone-600 mt-4">This checklist helps you create a supportive physical study space. Ticking items is for your reference; selections are not saved.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Mastering Your Digital Study Environment</h3>
+                    <p class="mb-4">Minimize digital distractions and strategically leverage tools.</p>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Minimizing Distractions:</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Keep distracting devices "out of sight, out of mind."</li>
+                                <li>Turn off unnecessary notifications.</li>
+                                <li>Use Pomodoro method for focused intervals.</li>
+                                <li>Schedule limited times for social media.</li>
+                                <li>Use distraction-blocking software (Freedom, Forest).</li>
+                                <li>Designate device-free study zones/times.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Leveraging Digital Tools:</h4>
+                            <ul class="list-none space-y-2">
+                                <li><span class="text-xl mr-2">🗂️</span><strong>Flashcard Apps:</strong> Anki, Quizlet, Knowt (Active Recall, Spaced Repetition).</li>
+                                <li><span class="text-xl mr-2">📝</span><strong>Note-Taking:</strong> Notion, Evernote, OneNote (Organization, Multimedia).</li>
+                                <li><span class="text-xl mr-2">📅</span><strong>Calendar/Task Mgmt:</strong> Google Calendar, MyStudyLife, Todoist, Trello (Planning, Deadlines).</li>
+                                <li><span class="text-xl mr-2">📚</span><strong>Academic Databases/Platforms:</strong> Google Scholar, JSTOR, Khan Academy, Coursera (Research, Learning).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">C. Critically Evaluating Online Learning Resources</h3>
+                    <p class="mb-4">The internet is vast; quality varies. Develop skills to discern credible resources.</p>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li><strong>Authority:</strong> Who is the author/organization? What are their credentials/affiliations? (.edu, .gov often reliable).</li>
+                        <li><strong>Accuracy:</strong> Is info evidence-based, verifiable? Peer-reviewed? Free from errors?</li>
+                        <li><strong>Purpose & Objectivity:</strong> What is the site's purpose (inform, persuade, sell)? Is there bias?</li>
+                        <li><strong>Coverage & Relevance:</strong> Is the topic covered in sufficient depth for your needs?</li>
+                        <li><strong>Currency:</strong> When was it published/updated? Is it current for the topic?</li>
+                        <li><strong>Links:</strong> Do external links go to reputable sources?</li>
+                    </ul>
+                    <p class="mt-3 text-sm text-stone-600">Start with academic databases (JSTOR, Google Scholar). Scrutinize websites/blogs carefully. Use Wikipedia for overviews but cite its primary sources.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="self-awareness" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">V. The Power of Self-Awareness: Metacognition and Self-Regulated Learning</h2>
+            <p class="mb-6 text-lg leading-relaxed">Understanding and directing your own learning processes (metacognition and self-regulated learning) is paramount. These skills empower you to be strategic, adaptable, and resilient, navigating education from GCSE to university and beyond. This section explores how to cultivate these crucial abilities.</p>
+            
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. Metacognition: Understanding How You Learn</h3>
+                    <p class="mb-2"><strong>Definition:</strong> "Thinking about thinking" – awareness and understanding of your own cognitive processes. Knowing *how* you learn best, what strategies work, and how to evaluate your comprehension.</p>
+                    <p class="mb-4">Metacognitive skills are strongly linked to improved academic performance. They shift you from passive recipient to active, strategic learner.</p>
+                    
+                    <h4 class="text-xl font-medium text-stone-700 mb-2">The Metacognitive Cycle:</h4>
+                     <div class="p-4 border border-sky-300 rounded-lg bg-sky-50 mb-4">
+                        <div class="flex flex-col md:flex-row justify-around items-center text-center">
+                            <div class="m-2 p-3 bg-white rounded shadow-md">
+                                <strong class="text-sky-700">1. Plan (Before Task)</strong>
+                                <ul class="text-sm list-disc list-inside text-left mt-1">
+                                    <li>Activate prior knowledge.</li>
+                                    <li>Analyze task, set goals.</li>
+                                    <li>Select strategies.</li>
+                                </ul>
+                            </div>
+                            <div class="text-sky-600 font-bold text-3xl my-2 md:my-0 md:mx-2">&rarr;</div>
+                            <div class="m-2 p-3 bg-white rounded shadow-md">
+                                <strong class="text-sky-700">2. Monitor (During Task)</strong>
+                                <ul class="text-sm list-disc list-inside text-left mt-1">
+                                    <li>Self-question, check comprehension.</li>
+                                    <li>Track progress.</li>
+                                    <li>Identify difficulties, adapt.</li>
+                                </ul>
+                            </div>
+                            <div class="text-sky-600 font-bold text-3xl my-2 md:my-0 md:mx-2">&rarr;</div>
+                            <div class="m-2 p-3 bg-white rounded shadow-md">
+                                <strong class="text-sky-700">3. Evaluate (After Task)</strong>
+                                <ul class="text-sm list-disc list-inside text-left mt-1">
+                                    <li>Review performance & strategy effectiveness.</li>
+                                    <li>Analyze errors, learn from them.</li>
+                                    <li>Consolidate knowledge.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-xs text-stone-600 mt-3 text-center">This cycle helps you consciously manage your learning. Apply it to different academic tasks and levels.</p>
+                    </div>
+
+                    <h4 class="text-xl font-medium text-stone-700 mb-2">Developing Metacognitive Skills Across Levels:</h4>
+                    <div class="tabs mb-1">
+                        <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="meta-gcse">GCSE/A-Level</button>
+                        <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="meta-uni">University</button>
+                    </div>
+                    <div id="meta-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                        <p>Often benefits from explicit instruction within subjects. Example: Art & Design's "Describe/Consider/Connect" routine for analyzing artwork, becoming more sophisticated from KS3 to A-Level. Focus on task-specific thought processes.</p>
+                    </div>
+                    <div id="meta-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                       <p>Essential for ill-defined problems, independent research, synthesizing diverse sources. Independently plan research, monitor understanding of abstract theories, critically evaluate own arguments. Reflection on feedback is key.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Self-Regulated Learning (SRL): Taking the Helm</h3>
+                    <p class="mb-2"><strong>Definition:</strong> Proactively taking responsibility for your learning by setting goals, selecting strategies, monitoring progress, and adjusting based on feedback and reflection. Encompasses cognitive, metacognitive, and motivational processes.</p>
+                    <p class="mb-4">SRL fosters autonomy, critical thinking, and adaptability. Effective self-regulators are more motivated, persistent, and successful.</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Practical SRL Strategies:</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Goal Setting:</strong> Use SMART criteria; break long-term goals into short-term ones.</li>
+                                <li><strong>Strategic Planning & Time Management:</strong> Create study plans, use calendars/to-do lists.</li>
+                                <li><strong>Task Prioritization:</strong> Use methods like Eisenhower Matrix.</li>
+                                <li><strong>Self-Monitoring:</strong> Track progress, assess strategy effectiveness.</li>
+                                <li><strong>Self-Instruction (Self-Talk):</strong> Guide yourself through tasks.</li>
+                                <li><strong>Self-Reflection & Evaluation:</strong> Review performance and process.</li>
+                                <li><strong>Seeking & Using Feedback:</strong> Actively seek and apply feedback.</li>
+                                <li><strong>Self-Reinforcement:</strong> Reward effort and goal achievement.</li>
+                                <li><strong>Managing Learning Environment:</strong> Minimize distractions.</li>
+                            </ul>
+                        </div>
+                        <div class="chart-container">
+                             <canvas id="srlComponentsChart"></canvas>
+                             <p class="text-sm text-stone-600 mt-2 text-center">Self-Regulated Learning involves cognitive, metacognitive, and motivational aspects, all working together.</p>
+                        </div>
+                    </div>
+
+                    <h4 class="text-xl font-medium text-stone-700 mt-6 mb-2">Adapting Self-Regulation for Increasing Academic Complexity:</h4>
+                     <div class="tabs mb-1">
+                        <button class="tab-button active py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="srl-gcse">GCSE</button>
+                        <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="srl-alevel">A-Level</button>
+                        <button class="tab-button py-2 px-4 border-b-2 border-transparent hover:border-sky-500" data-target="srl-uni">University</button>
+                    </div>
+                    <div id="srl-gcse" class="tab-content active p-3 bg-sky-50 rounded">
+                        <p>Establish basic routines for homework/revision, meet deadlines, set simple goals, use teacher feedback. More scaffolded support.</p>
+                    </div>
+                    <div id="srl-alevel" class="tab-content hidden p-3 bg-sky-50 rounded">
+                       <p>Increased independence. Manage "free study periods," plan for in-depth understanding, prioritize complex workloads. More autonomous goal setting.</p>
+                    </div>
+                    <div id="srl-uni" class="tab-content hidden p-3 bg-sky-50 rounded">
+                        <p>Paramount for success. Manage extensive independent reading/research, prepare for seminars, write lengthy essays, manage long-term projects with less oversight. Advanced self-motivation and strategic planning needed.</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">Table 4: Metacognitive & Self-Regulation Toolkit</h3>
+                    <table class="min-w-full divide-y divide-stone-200">
+                        <thead class="bg-stone-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Phase</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Key Questions</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Metacognitive Strategies</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-stone-500 uppercase tracking-wider">Self-Regulation Strategies</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-stone-200">
+                            <tr>
+                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm font-medium text-stone-900">Planning (Before)</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Goal? Prior knowledge? Approach? Resources? Time?</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Activate prior knowledge. Break task down. Choose strategies. Predict challenges.</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Set SMART goals. Create schedule/to-do list. Organize space/materials. Allocate time.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm font-medium text-stone-900">Monitoring (During)</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Understanding? Strategy working? On track? Confusing parts? Change approach?</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Self-question. Pause & summarize. Identify confusion. Track time vs. progress.</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Stick to schedule. Manage distractions. Take breaks (Pomodoro). Adjust effort. Seek help.</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 align-top whitespace-nowrap text-sm font-medium text-stone-900">Evaluating (After)</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">How well? Goal achieved? Plan effective? Best strategies? Do differently? Mistakes made?</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Review performance. Analyze errors. Reflect on strategy effectiveness. Identify learning.</td>
+                                <td class="px-4 py-3 align-top text-sm text-stone-500">Review feedback. Update logs. Reward effort. Plan next steps. Adjust future goals.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="holistic-learner" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">VI. The Holistic Learner: Lifestyle Factors for Peak Performance</h2>
+            <p class="mb-6 text-lg leading-relaxed">Academic success isn't just about study strategies; it's profoundly influenced by your overall well-being. Sleep, nutrition, and physical activity are critical for enhancing cognitive function, memory, and stress management. This section explores how to integrate these lifestyle factors for peak academic performance.</p>
+
+            <div class="space-y-8">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">A. The Critical Role of Sleep</h3>
+                    <p class="mb-2">Sleep is crucial for brain maintenance, learning, and memory consolidation (transferring info to long-term memory). It impacts attention, concentration, problem-solving, and emotional regulation.</p>
+                    <p class="mb-4">Sleep deprivation impairs these functions, potentially affecting grades and increasing academic failure risk.</p>
+                    <div class="grid md:grid-cols-2 gap-6 items-center">
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Recommended Sleep Durations:</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Teens (GCSE/A-Level):</strong> 8-10 hours per 24-hour period.</li>
+                                <li><strong>Younger school-age children:</strong> About 9-11 hours.</li>
+                                <li><strong>Adults (University):</strong> 7-9 hours per night.</li>
+                            </ul>
+                            <h4 class="text-xl font-medium text-stone-700 mt-4 mb-2">Practical Advice for Better Sleep:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li>Consistent sleep schedule (even weekends).</li>
+                                <li>Relaxing bedtime routine.</li>
+                                <li>Dark, quiet, cool bedroom; bed for sleep only.</li>
+                                <li>Avoid screens 30+ mins before bed.</li>
+                                <li>Daytime natural light & physical activity.</li>
+                            </ul>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="sleepChart"></canvas>
+                            <p class="text-sm text-stone-600 mt-2 text-center">Adequate sleep is foundational for learning.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">B. Fueling the Brain: Nutrition & Hydration</h3>
+                    <p class="mb-4">What you eat and drink directly impacts brain function, concentration, and memory. A balanced diet provides steady energy and essential nutrients.</p>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Key Nutrients for Brain Health:</h4>
+                            <ul class="list-none space-y-1 text-sm">
+                                <li><span class="text-lg mr-1">🐟</span><strong>Omega-3s:</strong> Oily fish, walnuts, flaxseeds (cell repair, cognitive function).</li>
+                                <li><span class="text-lg mr-1">🫐</span><strong>Antioxidants:</strong> Berries, dark chocolate, citrus (protect cells, support memory).</li>
+                                <li><span class="text-lg mr-1">🥚</span><strong>B Vitamins & Choline:</strong> Eggs, avocados, whole grains (neurotransmitters, mood, memory).</li>
+                                <li><span class="text-lg mr-1">🍗</span><strong>Proteins:</strong> Lean meats, beans, nuts (neurotransmitter building blocks).</li>
+                                <li><span class="text-lg mr-1">💧</span><strong>Hydration:</strong> Water is essential (nutrient delivery, toxin removal). Dehydration impairs cognition.</li>
+                            </ul>
+                            <p class="mt-3 text-sm"><strong>Impact of Breakfast:</strong> Linked to better focus, memory, and academic performance.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Practical Advice for Healthy Eating:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li>Balanced diet: whole grains, lean proteins, fruits, veggies, healthy fats.</li>
+                                <li>Incorporate "brain foods" regularly.</li>
+                                <li>Prepare meals/healthy snacks in advance.</li>
+                                <li>Stay consistently hydrated with water.</li>
+                                <li>Limit sugary snacks/drinks, fast food, processed foods.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">C. Physical Activity: Moving Your Body to Boost Your Mind</h3>
+                    <p class="mb-4">Regular physical activity offers substantial benefits for cognitive enhancement, stress reduction, and academic performance.</p>
+                    <div class="grid md:grid-cols-2 gap-6 items-center">
+                        <div>
+                            <h4 class="text-xl font-medium text-stone-700 mb-2">Cognitive & Mood Benefits:</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li>Improves memory, attention, problem-solving.</li>
+                                <li>Increases blood flow & oxygen to brain; promotes neurogenesis.</li>
+                                <li>Boosts BDNF (brain cell health/growth).</li>
+                                <li>Natural stress reliever (endorphins); improves mood.</li>
+                                <li>Increases energy levels; aids better sleep.</li>
+                            </ul>
+                             <h4 class="text-xl font-medium text-stone-700 mt-4 mb-2">Practical Advice for Staying Active:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-sm">
+                                <li>Choose enjoyable activities.</li>
+                                <li>Incorporate movement into daily routines (walk, cycle, stairs).</li>
+                                <li>Schedule exercise.</li>
+                                <li>Take short "brain breaks" with physical activity.</li>
+                            </ul>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="activityChart"></canvas>
+                            <p class="text-sm text-stone-600 mt-2 text-center">Regular activity supports both physical and mental well-being.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-2xl font-semibold text-sky-600 mb-3">D. Maintaining Well-being & Managing Stress</h3>
+                    <p class="mb-4">Integrate healthy habits and effective stress management for sustained cognitive performance.</p>
+                    <ul class="list-disc list-inside grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                        <li>Establish a balanced routine (study, meals, exercise, relaxation, sleep).</li>
+                        <li>Practice mindfulness, deep breathing, gratitude. (Apps: Headspace, Calm).</li>
+                        <li>Take regular short breaks during study (Pomodoro).</li>
+                        <li>Maintain social connections for support.</li>
+                        <li>Effective time management & organization reduces overwhelm.</li>
+                        <li>Learn to set boundaries and say "no" to protect mental health.</li>
+                        <li>Seek support (teachers, counselors) if stress is overwhelming.</li>
+                        <li>Use positive visualization for confidence.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="conclusion" class="content-section mb-12">
+            <h2 class="text-3xl font-bold text-sky-700 mb-6">Conclusion: Your Journey to Effective Learning</h2>
+            <p class="mb-4 text-lg leading-relaxed">Navigating GCSE, A-Level, and University demands strategic, evidence-based learning. This guide has armed you with powerful techniques grounded in cognitive psychology to enhance learning, revision, and retention.</p>
+            <p class="mb-3 leading-relaxed">By embracing <strong>active recall, spaced repetition, interleaving,</strong> and <strong>elaborative interrogation</strong>, you transform from a passive recipient to an active constructor of knowledge. Advanced strategies like the <strong>Feynman Technique, blurting, mind mapping, effective flashcards,</strong> and <strong>powerful summary notes</strong> provide practical frameworks to apply these principles.</p>
+            <p class="mb-3 leading-relaxed">An optimized <strong>learning ecosystem</strong> (physical and digital), coupled with critical evaluation of online resources, is essential. Developing <strong>metacognition</strong> and <strong>self-regulated learning</strong> skills empowers you to become an autonomous, strategic learner.</p>
+            <p class="mb-3 leading-relaxed">Finally, never underestimate the profound impact of <strong>lifestyle factors</strong>: sleep, nutrition, and physical activity form the physiological foundation for peak cognitive performance.</p>
+            <p class="text-lg font-semibold text-sky-700 leading-relaxed">Mastering learning is an achievable skill. By understanding these strategies, adapting them to your needs, and embracing a holistic approach to well-being, you can unlock your potential, achieve your academic goals, and cultivate a lifelong love for learning.</p>
+        </section>
+
+    </main>
+
+    <script>
+        // Sidebar toggle functionality
+        const sidebar = document.getElementById('sidebar');
+        const menuToggleOpen = document.getElementById('menu-toggle-open');
+        const menuToggleClose = document.getElementById('menu-toggle-close');
+        const mainContent = document.querySelector('main');
+
+        if (menuToggleOpen && menuToggleClose && sidebar) {
+            menuToggleOpen.addEventListener('click', () => {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+            });
+            menuToggleClose.addEventListener('click', () => {
+                sidebar.classList.remove('translate-x-0');
+                sidebar.classList.add('-translate-x-full');
+            });
+             // Close sidebar when a nav link is clicked on mobile
+            document.querySelectorAll('#sidebar .nav-link').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (window.innerWidth < 768) { // md breakpoint
+                        sidebar.classList.remove('translate-x-0');
+                        sidebar.classList.add('-translate-x-full');
+                    }
+                });
+            });
+        }
+
+        // Smooth scrolling and section highlighting
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+
+                if (targetElement) {
+                    // Remove active class from all nav links and sections
+                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                    document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+                    
+                    // Add active class to the clicked nav link and target section
+                    this.classList.add('active');
+                    targetElement.classList.add('active');
+                    
+                    // Scroll to target element
+                    // Adding a slight offset for fixed header on mobile
+                    const offset = window.innerWidth < 768 ? 70 : 20; // 70px for mobile, 20px for desktop
+                    const bodyRect = document.body.getBoundingClientRect().top;
+                    const elementRect = targetElement.getBoundingClientRect().top;
+                    const elementPosition = elementRect - bodyRect;
+                    const offsetPosition = elementPosition - offset;
+
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Set initial active section based on URL hash or default to introduction
+        function setInitialSection() {
+            const hash = window.location.hash;
+            let activeSectionId = 'introduction'; // Default
+            if (hash) {
+                const potentialSection = document.querySelector(hash);
+                if (potentialSection && potentialSection.classList.contains('content-section')) {
+                    activeSectionId = hash.substring(1);
+                }
+            }
+            
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+
+            const activeNavLink = document.querySelector(`.nav-link[href="#${activeSectionId}"]`);
+            const activeContentSection = document.getElementById(activeSectionId);
+
+            if (activeNavLink) activeNavLink.classList.add('active');
+            if (activeContentSection) activeContentSection.classList.add('active');
+        }
+        
+        window.addEventListener('load', setInitialSection);
+
+
+        // Tab functionality
+        document.querySelectorAll('.tabs').forEach(tabGroup => {
+            const tabButtons = tabGroup.querySelectorAll('.tab-button');
+            const tabContents = tabGroup.nextElementSibling.querySelectorAll('.tab-content'); // Assumes content div is immediately after tabs div
+
+            // More robustly find the parent of tab-content elements if structure varies
+            let contentContainer = tabGroup.parentElement.querySelector('.tab-content')?.parentElement;
+            if (!contentContainer) { // Fallback if structure is slightly different
+                 contentContainer = tabGroup.nextElementSibling;
+            }
+            
+            if(contentContainer){
+                const allContentsInGroup = contentContainer.querySelectorAll('.tab-content');
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        const targetId = button.dataset.target;
+                        
+                        allContentsInGroup.forEach(content => {
+                            if (content.id === targetId) {
+                                content.classList.remove('hidden');
+                                content.classList.add('active');
+                            } else {
+                                content.classList.add('hidden');
+                                content.classList.remove('active');
+                            }
+                        });
+                    });
+                });
+            }
+        });
+
+        // Accordion functionality
+        document.querySelectorAll('.accordion-toggle').forEach(button => {
+            button.addEventListener('click', () => {
+                const content = button.nextElementSibling;
+                const isOpening = content.style.maxHeight === '0px' || !content.style.maxHeight;
+                
+                // Close all other accordions in the same parent group if needed (optional)
+                // Example: if you want only one accordion open at a time within a .space-y-8 parent
+                // const parentGroup = button.closest('.space-y-8'); // Adjust selector if needed
+                // if (parentGroup) {
+                //     parentGroup.querySelectorAll('.accordion-content').forEach(acc => {
+                //         if (acc !== content) {
+                //             acc.style.maxHeight = '0px';
+                //             acc.previousElementSibling.textContent = acc.previousElementSibling.textContent.replace(' -', ' +');
+                //         }
+                //     });
+                // }
+
+                if (isOpening) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    button.textContent = button.textContent.replace('+', '-');
+                } else {
+                    content.style.maxHeight = "0px";
+                    button.textContent = button.textContent.replace('-', '+');
+                }
+            });
+        });
+
+        // Chart.js implementations
+        // Function to wrap text in Chart.js tooltips and labels
+        function wrapText(str, maxWidth) {
+            const newLineStr = "\n";
+            let res = '';
+            while (str.length > maxWidth) {
+                let found = false;
+                // Inserts new line at first whitespace of the line
+                for (let i = maxWidth - 1; i >= 0; i--) {
+                    if (str.charAt(i).match(/^\s$/)) {
+                        res = res + [str.slice(0, i), newLineStr].join('');
+                        str = str.slice(i + 1);
+                        found = true;
+                        break;
+                    }
+                }
+                // Inserts new line at maxWidth position, the word is too long
+                if (!found) {
+                    res += [str.slice(0, maxWidth), newLineStr].join('');
+                    str = str.slice(maxWidth);
+                }
+            }
+            return res + str;
+        }
+
+        // 1. Foundational Principles Chart
+        const fpCtx = document.getElementById('foundationalPrinciplesChart');
+        if (fpCtx) {
+            new Chart(fpCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Active Recall', 'Spaced Repetition', 'Interleaving', 'Elaborative Interrogation'],
+                    datasets: [{
+                        label: 'Impact on Long-Term Retention',
+                        data: [90, 95, 75, 80], // Illustrative data
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)', // blue-500
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Impact on Depth of Understanding',
+                        data: [85, 70, 80, 90], // Illustrative data
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)', // amber-500
+                        borderColor: 'rgba(245, 158, 11, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Relative Impact (%)' }
+                        },
+                        x: {
+                             ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + '% (Illustrative)';
+                                    }
+                                    return wrapText(label, 20);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. SRL Components Chart
+        const srlCtx = document.getElementById('srlComponentsChart');
+        if (srlCtx) {
+            new Chart(srlCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cognitive Strategies', 'Metacognitive Awareness', 'Motivational Beliefs'],
+                    datasets: [{
+                        label: 'Components of Self-Regulated Learning',
+                        data: [35, 35, 30], // Illustrative percentages
+                        backgroundColor: [
+                            'rgba(59, 130, 246, 0.7)', // blue-500
+                            'rgba(16, 185, 129, 0.7)', // emerald-500
+                            'rgba(245, 158, 11, 0.7)'  // amber-500
+                        ],
+                        borderColor: [
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(16, 185, 129, 1)',
+                            'rgba(245, 158, 11, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                             callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) { label += ': '; }
+                                    if (context.parsed !== null) {
+                                        label += context.parsed + '%';
+                                    }
+                                    return wrapText(label, 20);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3. Sleep Chart
+        const sleepCtx = document.getElementById('sleepChart');
+        if (sleepCtx) {
+            new Chart(sleepCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Teens (GCSE/A-Level)', 'Younger Children', 'Adults (University)'],
+                    datasets: [{
+                        label: 'Min Recommended Sleep (hours)',
+                        data: [8, 9, 7],
+                        backgroundColor: 'rgba(16, 185, 129, 0.5)', // emerald-500
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0',
+                    }, {
+                        label: 'Max Recommended Sleep (hours) - up to',
+                        data: [2, 2, 2], // Represents the range (e.g., 8-10 means 8 + 2)
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)', // emerald-500 darker
+                        borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1,
+                        stack: 'Stack 0',
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 12,
+                            title: { display: true, text: 'Hours of Sleep' },
+                            stacked: true,
+                        },
+                        x: {
+                            stacked: true,
+                            ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }, // Simpler display for stacked bar
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const val = context.parsed.y;
+                                    if (context.datasetIndex === 0) {
+                                        const totalMax = context.chart.data.datasets[0].data[context.dataIndex] + context.chart.data.datasets[1].data[context.dataIndex];
+                                        return wrapText(`${context.chart.data.labels[context.dataIndex]}: ${val}-${totalMax} hours`, 25);
+                                    }
+                                    return null; // Hide tooltip for the second dataset part
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 4. Physical Activity Chart
+        const activityCtx = document.getElementById('activityChart');
+        if (activityCtx) {
+            new Chart(activityCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Children/Adolescents (6-17 yrs)', 'Adults (18-65 yrs, University)'],
+                    datasets: [{
+                        label: 'Moderate Activity (mins/week)',
+                        data: [0, 150], // Adolescents: 60 mins/day = 420 total, but guidelines are more complex. Adults: 150 mins.
+                                        // For simplicity, showing adult guideline and emphasizing daily for adolescents.
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)', // red-500
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Vigorous Activity (mins/week)',
+                        data: [0, 75], // Adults: 75 mins.
+                        backgroundColor: 'rgba(217, 119, 6, 0.7)', // orange-500
+                        borderColor: 'rgba(217, 119, 6, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Recommended Minutes per Week' }
+                        },
+                        x: {
+                             ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 15);}}
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) { label += ': '; }
+                                    label += context.parsed.y + ' mins/week';
+                                    if (context.label.includes('Children')) {
+                                        label = wrapText('Children/Adolescents: At least 60 mins moderate-to-vigorous activity DAILY (including vigorous & muscle/bone strengthening 3x/week). Chart shows adult weekly for comparison.', 30);
+                                    } else {
+                                       label = wrapText(label, 25);
+                                    }
+                                    return label;
+                                }
+                            }
+                        },
+                        subtitle: {
+                            display: true,
+                            text: 'Note: Children/Adolescents need 60 mins daily activity.',
+                            padding: { top: 10 }
+                        }
+                    }
+                }
+            });
+        }
+
+    </script>
+</body>
+</html>

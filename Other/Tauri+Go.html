@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
+    <title>Interactive Guide: Go, Tauri & Integration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Introduction: Text block. Goal: Orient user.
+        - Go Networking:
+            - Concepts (net.Conn, etc.): Text with toggleable details. Goal: Explain fundamentals.
+            - Code Snippets: Preformatted text. Goal: Illustrate usage.
+            - Table 1 (Go Libs): Interactive HTML table. Goal: Compare options. Interaction: Hover highlight.
+        - Tauri Development:
+            - Architecture: HTML/CSS diagram. Goal: Visualize structure.
+            - tauri.conf.json: Key-value display. Goal: Explain config.
+            - Commands/Events: Text with toggleable details. Goal: Explain IPC.
+            - Table 2 (Tauri APIs): Interactive HTML table. Goal: Reference APIs. Interaction: Hover highlight.
+        - Go-Tauri Integration:
+            - Communication Strategies: HTML/CSS diagrams. Goal: Visualize IPC options.
+            - Table 3 (IPC Mechanisms): Interactive HTML table. Goal: Compare integration methods. Interaction: Hover highlight.
+        - Conclusion: Text block. Goal: Summarize.
+        - Justification: This approach prioritizes clarity and interactive exploration of the dense textual and conceptual information in the report. Charts are not a primary focus as the report lacks quantitative datasets suitable for typical charting; tables and diagrams are more appropriate.
+        - Library/Method: Vanilla JS for interactions, Tailwind for styling. Chart.js will be included.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .collapsible-content {
+            display: none;
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        .collapsible-content.open {
+            display: block;
+        }
+        .collapsible-trigger .arrow {
+            transition: transform 0.3s ease;
+        }
+        .collapsible-trigger.open .arrow {
+            transform: rotate(90deg);
+        }
+        .table-container table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table-container th, .table-container td {
+            border: 1px solid #e5e7eb; /* Tailwind gray-200 */
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .table-container th {
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .table-container tr:hover {
+            background-color: #e0f2fe; /* Tailwind sky-100 */
+        }
+        pre {
+            background-color: #1f2937; /* Tailwind gray-800 */
+            color: #d1d5db; /* Tailwind gray-300 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px; /* Example max-width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px; /* Base height */
+            max-height: 450px; /* Max height */
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .sidebar-item {
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .sidebar-item.active, .sidebar-item:hover {
+            background-color: #0d9488; /* Tailwind teal-600 */
+            color: white;
+        }
+        .sidebar-item.active {
+             font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 flex min-h-screen">
+
+    <aside id="sidebar" class="w-64 bg-stone-50 p-6 shadow-lg fixed top-0 left-0 h-full overflow-y-auto transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full">
+        <h1 class="text-2xl font-bold text-teal-700 mb-8 border-b pb-4 border-teal-200">Report Sections</h1>
+        <nav>
+            <ul class="space-y-2">
+                <li><a href="#" class="sidebar-item block py-2.5 px-4 rounded-lg hover:bg-teal-600 hover:text-white" data-section="intro">I. Introduction</a></li>
+                <li><a href="#" class="sidebar-item block py-2.5 px-4 rounded-lg hover:bg-teal-600 hover:text-white" data-section="go-networking">II. Go Networking</a></li>
+                <li><a href="#" class="sidebar-item block py-2.5 px-4 rounded-lg hover:bg-teal-600 hover:text-white" data-section="tauri-dev">III. Tauri Development</a></li>
+                <li><a href="#" class="sidebar-item block py-2.5 px-4 rounded-lg hover:bg-teal-600 hover:text-white" data-section="integration">IV. Go & Tauri Integration</a></li>
+                <li><a href="#" class="sidebar-item block py-2.5 px-4 rounded-lg hover:bg-teal-600 hover:text-white" data-section="conclusion">V. Conclusion</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <button id="mobileMenuButton" class="md:hidden fixed top-4 left-4 z-50 p-2 bg-teal-600 text-white rounded-md shadow-md">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+        </svg>
+    </button>
+
+
+    <main class="flex-1 p-6 md:ml-64 transition-all duration-300 ease-in-out">
+        <div class="max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-xl">
+
+            <section id="intro" class="content-section">
+                <h2 class="text-3xl font-semibold text-teal-700 mb-6">I. Introduction: Charting Your Learning Path</h2>
+                <p class="mb-4 text-lg leading-relaxed">This interactive guide helps you explore the key aspects of Go networking, Tauri application development, and their integration. The aim is to provide a clear, structured path to understanding these technologies for building modern, efficient, and robust applications.</p>
+                <div class="bg-sky-50 p-6 rounded-lg border border-sky-200">
+                    <h3 class="text-xl font-semibold text-sky-700 mb-3">Why This Stack?</h3>
+                    <p class="mb-2"><strong class="text-sky-600">Go:</strong> Chosen for its strong performance, efficient concurrency, and comprehensive standard library, making it ideal for scalable networking backends.</p>
+                    <p class="mb-2"><strong class="text-sky-600">Tauri:</strong> A compelling framework for lightweight, secure, cross-platform desktop apps using web tech for UI (HTML, CSS, JS) backed by a Rust core. This leverages web dev skills while gaining native performance and security.</p>
+                    <h3 class="text-xl font-semibold text-sky-700 mt-4 mb-3">Challenges & Opportunities</h3>
+                    <p class="mb-2">Key challenges include managing Inter-Process Communication (IPC) between Tauri (JS via Rust) and a Go backend, state management across runtimes, and security. The learning curve for Go, Rust, and Tauri, plus their integration, requires dedicated study.</p>
+                    <p>Opportunities include Go's efficiency for intensive tasks, Tauri's small bundle sizes (using system WebViews vs. Electron bundling a browser), and the power of modern web UI workflows with compiled backend performance (Rust & Go).</p>
+                </div>
+            </section>
+
+            <section id="go-networking" class="content-section">
+                <h2 class="text-3xl font-semibold text-teal-700 mb-6">II. Deep Dive into Go Networking</h2>
+                <p class="mb-6 text-lg leading-relaxed">This section explores Go's networking capabilities, from fundamental building blocks to advanced protocols and security. The goal is to build a robust understanding for creating efficient, scalable, and secure network applications in Go.</p>
+
+                <div class="space-y-6">
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>A. Foundations of Go Networking (`net` & `net/http`)</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <p class="mb-3">A solid grasp of Go's foundational networking packages, <code>net</code> and <code>net/http</code>, is essential.</p>
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">The <code>net</code> Package: TCP/IP and UDP Communication</h4>
+                            <p class="mb-2">Provides core functionalities for network I/O. Key types:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><code>net.Conn</code>: Generic stream-oriented network connection (TCP, connected UDP). Methods: <code>Read()</code>, <code>Write()</code>, <code>Close()</code>.</li>
+                                <li><code>net.Listener</code>: Generic network listener for stream-oriented protocols (TCP). Method: <code>Accept()</code>.</li>
+                                <li><code>net.PacketConn</code>: Generic packet-oriented network connection (UDP). Methods: <code>ReadFrom()</code>, <code>WriteTo()</code>.</li>
+                                <li><code>net.Addr</code>: Network end point address.</li>
+                            </ul>
+                            <p class="mb-2 font-medium">Basic TCP Client/Server:</p>
+                            <pre><code class="language-go">// TCP Server (Conceptual)
+listener, err := net.Listen("tcp", ":8080")
+// ... error handling ...
+defer listener.Close()
+for {
+    conn, err := listener.Accept()
+    // ... error handling ...
+    go handleConnection(conn)
+}
+
+// TCP Client (Conceptual)
+conn, err := net.Dial("tcp", "localhost:8080")
+// ... error handling ...
+defer conn.Close()
+// Use conn.Write() and conn.Read()</code></pre>
+                            <p class="mt-3 mb-2 font-medium">Basic UDP Client/Server:</p>
+                            <pre><code class="language-go">// UDP Server (Conceptual)
+addr, _ := net.ResolveUDPAddr("udp", ":8080")
+conn, err := net.ListenUDP("udp", addr)
+// ... error handling ...
+defer conn.Close()
+buffer := make([]byte, 1024)
+for {
+    n, remoteAddr, err := conn.ReadFromUDP(buffer)
+    // ... error handling, process buffer[:n] ...
+    conn.WriteToUDP([]byte("response"), remoteAddr)
+}
+
+// UDP Client (Conceptual, connected)
+conn, err := net.Dial("udp", "localhost:8080")
+// ... error handling ...
+defer conn.Close()
+conn.Write([]byte("hello"))
+// ... read response ...</code></pre>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Note:</strong> Go's <code>net</code> package offers high-level, cross-platform APIs, simplifying socket programming. For very specialized needs (e.g., raw socket options), the <code>syscall</code> package might be needed.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">The <code>net/http</code> Package: Building Web Applications</h4>
+                            <p class="mb-2">Provides comprehensive tools for HTTP clients and servers (HTTP/1.1, HTTP/2 with HTTPS).</p>
+                            <p class="mb-2 font-medium">Creating HTTP Servers:</p>
+                            <pre><code class="language-go">func greetHandler(w http.ResponseWriter, r *http.Request) {
+    fmt.Fprintf(w, "Hello, World!")
+}
+func main() {
+    http.HandleFunc("/greet", greetHandler)
+    log.Fatal(http.ListenAndServe(":8080", nil)) // nil uses http.DefaultServeMux
+}</code></pre>
+                            <p class="mt-3 mb-2">Key concepts: <code>http.Handler</code>, <code>ServeMux</code> (request router), <code>http.ResponseWriter</code>, <code>*http.Request</code>.</p>
+                            <p class="mb-2 font-medium">Creating HTTP Clients:</p>
+                            <pre><code class="language-go">resp, err := http.Get("http://example.com")
+// ... error handling ...
+defer resp.Body.Close()
+body, err := io.ReadAll(resp.Body)
+// Process body</code></pre>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Production Tip:</strong> Use a custom <code>http.Server</code> and <code>http.NewServeMux()</code> instead of <code>http.DefaultServeMux</code> for better control and security (e.g., setting timeouts like <code>ReadTimeout</code>, <code>WriteTimeout</code>).</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>B. Advanced Go Networking Protocols & Techniques</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">WebSocket Implementation in Go</h4>
+                            <p class="mb-2">For persistent, full-duplex communication (e.g., chat, live updates). Community favors <code>gorilla/websocket</code> over <code>golang.org/x/net/websocket</code>.</p>
+                            <p class="mb-2"><strong>Key Pattern: Read/Write Pumps.</strong> Each WebSocket connection needs two goroutines: one for reading (read pump) and one for writing (write pump) to avoid blocking and handle concurrency.</p>
+                            <pre><code class="language-go">// Conceptual Read Pump
+func (c *Client) readPump() {
+    // ... setup, defer cleanup ...
+    for {
+        messageType, message, err := c.conn.ReadMessage()
+        // ... handle error, process message ...
+    }
+}
+
+// Conceptual Write Pump
+func (c *Client) writePump() {
+    // ... setup ticker for pings, defer cleanup ...
+    for {
+        select {
+        case message, ok := <-c.send:
+            // ... send message to c.conn ...
+        case <-ticker.C:
+            // ... send ping message ...
+        }
+    }
+}</code></pre>
+                            <p class="mt-3 mb-2"><strong>Message Broadcasting:</strong> Iterate through active client connections and send messages via their write pumps.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">gRPC in Go</h4>
+                            <p class="mb-2">High-performance, type-safe RPC framework using Protocol Buffers (Protobuf) and HTTP/2. Ideal for microservices.</p>
+                            <ol class="list-decimal list-inside ml-4 space-y-1 mb-3">
+                                <li>Define services and messages in <code>.proto</code> files.</li>
+                                <li>Use <code>protoc</code> compiler with Go plugins (<code>protoc-gen-go</code>, <code>protoc-gen-go-grpc</code>) to generate Go code.</li>
+                                <li>Implement server-side logic satisfying the generated interface; use client stubs for remote calls.</li>
+                            </ol>
+                            <pre><code class="language-protobuf">// Example .proto Snippet
+syntax = "proto3";
+service Greeter {
+  rpc SayHello (HelloRequest) returns (HelloReply);
+}
+message HelloRequest { string name = 1; }
+message HelloReply { string message = 1; }</code></pre>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Automation:</strong> Automate <code>protoc</code> code generation in build systems (<code>go generate</code>, Makefile) for consistency.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Custom Network Protocols over TCP/IP</h4>
+                            <p class="mb-2">When standard protocols don't fit. Requires handling message framing and data serialization.</p>
+                            <p class="mb-1 font-medium">Message Framing Techniques:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>Length-Prefixing:</strong> Precede message with its length. Robust for binary.</li>
+                                <li><strong>Delimiters:</strong> End message with a special sequence (e.g., newline). Common for text.</li>
+                                <li><strong>Fixed-Length Messages:</strong> All messages have a constant size. Less flexible.</li>
+                            </ul>
+                            <p class="mb-1 font-medium">Serialization/Deserialization Strategies:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>JSON:</strong> Human-readable, good for interoperability.</li>
+                                <li><strong>Gob:</strong> Go's native binary format. Efficient for Go-to-Go.</li>
+                                <li><strong>Protocol Buffers:</strong> Language-agnostic, efficient binary. Requires framing over raw TCP.</li>
+                            </ul>
+                             <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Libraries:</strong> Consider libraries like <code>goframe</code> for pre-built framing solutions to simplify development.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>C. Performance, Concurrency, and Resource Management</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">Go's Concurrency Model in Networking</h4>
+                            <p class="mb-2">Goroutines and channels are central. Common pattern: spawn a goroutine per client connection (<code>go handleConnection(conn)</code>).</p>
+                            <p class="mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>High Concurrency Note:</strong> For extremely high concurrency (C10K+), the "goroutine per connection" model might hit limits. Advanced patterns like worker pools with an I/O poller (abstracted by Go's netpoller) might be needed.</p>
+                            <p class="mb-1 font-medium">Potential Pitfalls:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>Race Conditions:</strong> Use <code>go test -race</code>. Synchronize with mutexes or channels.</li>
+                                <li><strong>Deadlocks:</strong> Careful design of locking and channel communication. Use <code>select</code> with <code>default</code> or timeouts.</li>
+                            </ul>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Optimizing Go Network Performance</h4>
+                            <p class="mb-1 font-medium">Connection Pooling (<code>net/http</code>):</p>
+                            <p class="mb-2"><code>http.Transport</code> (in <code>http.Client</code>) pools connections automatically. Tune with:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><code>MaxIdleConns</code>, <code>MaxIdleConnsPerHost</code> (default 2 is often too low), <code>IdleConnTimeout</code>, <code>MaxConnsPerHost</code>.</li>
+                            </ul>
+                            <p class="mb-1 font-medium">Buffer Management (<code>sync.Pool</code>):</p>
+                            <p class="mb-2">Reuse byte buffers (<code>[]byte</code>) to reduce GC pressure. Get with <code>pool.Get()</code>, put back with <code>pool.Put()</code>.</p>
+                            <p class="mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong><code>sync.Pool</code> Nuance:</strong> May retain larger-than-necessary buffers if varying sizes are pooled. Consider multiple pools for different size classes for optimal memory use.</p>
+                            <p class="mb-1 font-medium">Minimizing Memory Allocations:</p>
+                            <p class="mb-2">Avoid unnecessary heap allocations in hot paths, use pointers judiciously, understand escape analysis.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>D. Security in Go Networking</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">Robust Error Handling</h4>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li>Check errors immediately.</li>
+                                <li>Wrap errors for context: <code>fmt.Errorf("op failed: %w", err)</code>.</li>
+                                <li>Avoid leaking internal error details to clients.</li>
+                                <li>Ensure graceful failure; use <code>recover</code> judiciously, clean up resources with <code>defer</code>.</li>
+                                <li>Communicate errors from goroutines (e.g., via an error channel).</li>
+                            </ul>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Secure TLS/SSL Configuration</h4>
+                            <p class="mb-2">Use <code>crypto/tls</code> and <code>net/http</code> integration (<code>http.ListenAndServeTLS</code>).</p>
+                            <p class="mb-1 font-medium">Best Practices for <code>tls.Config</code>:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><code>MinVersion</code>: <code>tls.VersionTLS12</code> or <code>tls.VersionTLS13</code>.</li>
+                                <li><code>CipherSuites</code>: Specify strong ciphers (GCM mode preferred). <code>PreferServerCipherSuites = true</code>.</li>
+                                <li><code>CurvePreferences</code>: Strong elliptic curves (e.g., <code>tls.CurveP256</code>, <code>tls.X25519</code>).</li>
+                                <li>Certificate Management: Use trusted CAs for public services. Protect private keys.</li>
+                                <li>HSTS Header: For web servers, enforce HTTPS.</li>
+                            </ul>
+                             <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Comprehensive TLS:</strong> Simply enabling TLS is not enough. Refer to OWASP TLS Cheat Sheet for detailed configuration.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Input Validation</h4>
+                            <p class="mb-2">Rigorously validate all external data (type, length, format, range) to prevent injection attacks, overflows, etc. Sanitize output for web (<code>html/template</code> helps prevent XSS).</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Preventing Common Network Attacks</h4>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>Denial of Service (DoS):</strong>
+                                    <ul class="list-disc list-inside ml-6">
+                                        <li>Limit request sizes, concurrent connections, processing time.</li>
+                                        <li>Set timeouts: <code>ReadTimeout</code>, <code>WriteTimeout</code>, <code>IdleTimeout</code>, and especially <code>ReadHeaderTimeout</code> (for Slowloris).</li>
+                                        <li>Implement rate limiting.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Man-in-the-Middle (MITM):</strong> Use TLS, validate certificates correctly (no <code>InsecureSkipVerify: true</code> in prod).</li>
+                                <li><strong>General:</strong> Secure coding practices, keep Go & deps updated, use tools like <code>govulncheck</code>.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                         <h3 class="text-2xl font-semibold text-sky-700 mb-4">Table 1: Comparison of Go Networking Libraries/Approaches</h3>
+                         <div class="table-container overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-lg">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Feature/Protocol</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Go Package/Library</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key Characteristics</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Common Use Cases</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key Security Considerations</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="goNetworkingTableBody">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tauri-dev" class="content-section">
+                <h2 class="text-3xl font-semibold text-teal-700 mb-6">III. Mastering Tauri for Desktop Application Development</h2>
+                <p class="mb-6 text-lg leading-relaxed">This section delves into the Tauri framework, guiding through its architecture, development model, and capabilities for creating secure, lightweight, cross-platform desktop applications.</p>
+                 <div class="space-y-6">
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>A. Tauri Fundamentals</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">Tauri's Architecture: Core Process and WebView Interaction</h4>
+                            <p class="mb-2">Multi-process architecture for security and efficiency:</p>
+                            <ol class="list-decimal list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>Rust Backend (Core Process):</strong> Entry point, OS access, window management, IPC orchestration.</li>
+                                <li><strong>Webview Frontend (WebView Process):</strong> Renders UI (HTML, CSS, JS) in a system-provided WebView. Communicates with Rust core via IPC (message passing).</li>
+                            </ol>
+                            <p class="mb-2 font-medium">Key Crates:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><code>tauri</code>: Main integration crate.</li>
+                                <li><code>wry</code>: Cross-platform WebView rendering library.</li>
+                                <li><code>tao</code>: Window creation and management.</li>
+                            </ul>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Significance of System WebViews:</strong> Leads to smaller app binaries and OS-managed security updates for the WebView. Trade-off: potential rendering/feature inconsistencies across OS versions (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux).</p>
+                            
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Tauri Project Setup and Configuration</h4>
+                            <p class="mb-2">Initialize with <code>create-tauri-app</code>. Structure includes frontend directory and <code>src-tauri/</code> for Rust backend.</p>
+                            <p class="mb-1 font-medium"><code>tauri.conf.json</code>: Central configuration file. Key sections:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><code>build</code>: Dev server (<code>devUrl</code>), output dir (<code>distDir</code>), build hooks.</li>
+                                <li><code>bundle</code>: App identifier, icons, resources, targets (msi, dmg, deb).</li>
+                                <li><code>app</code> (v2) / <code>tauri > windows</code> (v1): Window configurations (label, title, url, size).</li>
+                                <li><code>app > security</code> (v2) / <code>tauri > security</code> (v1): CSP, capabilities.</li>
+                                <li><code>plugins</code>: Plugin configuration.</li>
+                            </ul>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Layered Configuration:</strong> Supports platform-specific overrides (e.g., <code>tauri.linux.conf.json</code>) and CLI overrides (<code>--config</code> with JSON Merge Patch).</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>B. Inter-Process Communication (IPC) in Tauri</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">Tauri Commands: Bridging JavaScript and Rust</h4>
+                            <p class="mb-2">Allow JS frontend to invoke Rust functions.</p>
+                            <p class="mb-1 font-medium">Defining in Rust:</p>
+                            <pre><code class="language-rust">#[tauri::command]
+fn greet(name: String) -> String {
+    format!("Hello, {}!", name)
+}
+
+// Register with builder:
+// .invoke_handler(tauri::generate_handler![greet])</code></pre>
+                            <p class="mb-1 mt-3 font-medium">Calling from JavaScript:</p>
+                            <pre><code class="language-javascript">import { invoke } from '@tauri-apps/api/core';
+const message = await invoke('greet', { name: 'Tauri User' });</code></pre>
+                            <p class="mt-3 mb-2">Arguments are deserialized (Rust: <code>serde::Deserialize</code>), return values serialized (Rust: <code>serde::Serialize</code>). Async commands (<code>async fn</code>) run on a separate thread pool.</p>
+                             <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Async Command Lifetimes:</strong> Be mindful of Rust's lifetime rules with <code>tauri::State</code> or borrowed types in async commands; owned types are often needed in signatures.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Tauri's Event System: Decoupled Communication</h4>
+                            <p class="mb-2">For asynchronous communication between Rust and JS, or between windows.</p>
+                            <p class="mb-1 font-medium">Emitting Events:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li>From Rust: <code>app_handle.emit("event-name", payload)</code> or <code>window.emit(...)</code>.</li>
+                                <li>From JavaScript: <code>emit("event-name", payload)</code> from <code>@tauri-apps/api/event</code>.</li>
+                            </ul>
+                            <p class="mb-1 font-medium">Listening to Events:</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li>In JavaScript: <code>listen("event-name", (event) => { ... })</code>. Returns unlisten function.</li>
+                                <li>In Rust: <code>app_handle.listen("event-name", |event| { ... })</code>.</li>
+                            </ul>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Event Limitations:</strong> Payloads are JSON serialized (inefficient for large binary data). For high-performance streaming, consider Tauri "channels".</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                         <h3 class="text-2xl font-semibold text-sky-700 mb-4">Table 2: Tauri Core JavaScript APIs for OS Integration</h3>
+                         <div class="table-container overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-lg">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">API Module (@tauri-apps/api/...)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Key Functions/Objects</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Example Use Case</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="tauriApisTableBody">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                     <p class="mt-4 text-sm text-stone-600">Note: Some APIs listed in Table 2 (e.g., tray, menu, notification, dialog, fs, os, shell, http, clipboard) are often provided via official Tauri plugins and require installation and setup.</p>
+                </div>
+            </section>
+
+            <section id="integration" class="content-section">
+                <h2 class="text-3xl font-semibold text-teal-700 mb-6">IV. Integrating a Go Networking Backend with a Tauri Application</h2>
+                <p class="mb-6 text-lg leading-relaxed">This section explores strategies for communication between a Tauri frontend (via its Rust core) and a separate Go backend process, focusing on IPC, data exchange, and security.</p>
+                <div class="space-y-6">
+                    <div>
+                        <button class="collapsible-trigger w-full text-left text-xl font-medium text-sky-700 p-3 bg-sky-50 rounded-md hover:bg-sky-100 focus:outline-none flex justify-between items-center">
+                            <span>A. Communication Strategies & IPC Mechanisms</span>
+                            <span class="arrow text-sky-600 transform transition-transform duration-300">▶</span>
+                        </button>
+                        <div class="collapsible-content mt-2 p-4 border border-sky-200 rounded-md bg-white">
+                            <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">Direct Network Calls (HTTP/HTTPS, WebSockets, gRPC)</h4>
+                            <p class="mb-2">If Go backend runs as a local server (e.g., on <code>localhost</code>).</p>
+                            <ul class="list-disc list-inside ml-4 space-y-2 mb-3">
+                                <li><strong>HTTP/HTTPS:</strong>
+                                    <ul class="list-circle list-inside ml-6">
+                                        <li>From Rust Core: Use HTTP clients like <code>reqwest</code>. Centralizes logic, bypasses webview CORS.</li>
+                                        <li>From JS Frontend: Standard <code>fetch</code>. Requires CSP (<code>connect-src</code>) and Go server CORS config for <code>tauri://localhost</code> or dev server origin.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>WebSockets:</strong>
+                                    <ul class="list-circle list-inside ml-6">
+                                        <li>From Rust Core: Rust as WebSocket client.</li>
+                                        <li>From JS Frontend: Tauri <code>websocket</code> plugin. Similar CSP/CORS needs.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>gRPC:</strong>
+                                    <ul class="list-circle list-inside ml-6">
+                                        <li>From Rust Core: Use gRPC clients like <code>tonic</code>.</li>
+                                        <li>From JS Frontend: Requires gRPC-Web on Go server (or Rust core as proxy).</li>
+                                    </ul>
+                                </li>
+                            </ul>
+                             <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Trade-off:</strong> Rust core routing centralizes logic and simplifies JS security. Direct JS calls may feel more natural but need careful webview security setup for local servers.</p>
+
+                            <h4 class="text-lg font-semibold text-stone-700 mt-6 mb-2">Sidecar Pattern for Bundled Go Backend</h4>
+                            <p class="mb-2">Bundle Go executable as a sidecar with Tauri app.</p>
+                            <ul class="list-disc list-inside ml-4 space-y-1 mb-3">
+                                <li><strong>Configuration:</strong> Specify Go executable in <code>tauri.conf.json > bundle.externalBin</code>.</li>
+                                <li><strong>Lifecycle:</strong> Tauri's <code>shell</code> plugin (<code>Command::sidecar()</code>) spawns/manages.</li>
+                                <li><strong>Communication:</strong> Typically via sidecar's stdin, stdout, stderr. Rust core reads/writes to these.</li>
+                            </ul>
+                            <p class="mt-3 mb-2 text-sm bg-yellow-50 p-3 rounded-md border border-yellow-200"><strong>Sidecar Lifecycle Note:</strong> Robust management of long-running Go server sidecars (restarts, graceful shutdown) is developer's responsibility in Rust. Default Tauri sidecar management is more for tools that execute and exit.</p>
+                            <p class="mt-3 mb-2"><strong>Common Sidecar Pattern:</strong> Go sidecar starts TCP server on a dynamic port, prints port to stdout. Rust core reads port, then communicates via network. Avoids hardcoded ports. Requires framing for complex stdio data.</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-8">
+                         <h3 class="text-2xl font-semibold text-sky-700 mb-4">Table 3: Comparison of IPC Mechanisms for Tauri (Rust) to Go Backend</h3>
+                         <div class="table-container overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-lg">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IPC Mechanism</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Implementation Complexity (Go & Rust)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Security Considerations</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Use Cases</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200" id="ipcTableBody">
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
+                     </div>
+            </section>
+
+            <section id="conclusion" class="content-section">
+                <h2 class="text-3xl font-semibold text-teal-700 mb-6">V. Conclusion: Synthesizing Your Research</h2>
+                <p class="mb-4 text-lg leading-relaxed">This research journey covers Go networking, Tauri development, and their integration, aiming to equip you with practical understanding for building powerful modern applications.</p>
+
+                <div class="bg-sky-50 p-6 rounded-lg border border-sky-200 mb-6">
+                    <h3 class="text-xl font-semibold text-sky-700 mb-3">Key Learnings Summarized</h3>
+                    <ul class="list-disc list-inside ml-4 space-y-2">
+                        <li><strong>Go Networking:</strong> Powerful standard library (<code>net</code>, <code>net/http</code>) and third-party options (<code>gorilla/websocket</code>, gRPC). Success hinges on concurrency (goroutines/channels), resource management (pooling), and security (TLS, validation).</li>
+                        <li><strong>Tauri Development:</strong> Lightweight, secure, cross-platform desktop apps with web UI & Rust core. Strengths: small bundles, security model (CSP, capabilities), native OS APIs. Complexities: system WebView nuances, Rust learning curve, IPC/state design.</li>
+                        <li><strong>Go-Tauri Integration:</strong> Strategies include Go as local server (HTTP, WS, gRPC via Rust core or direct JS) or bundled sidecar (stdio/local network). Choice depends on backend nature, deployment, security.</li>
+                    </ul>
+                </div>
+
+                <button class="collapsible-trigger w-full text-left text-xl font-medium text-stone-700 p-3 bg-stone-100 rounded-md hover:bg-stone-200 focus:outline-none flex justify-between items-center mt-4">
+                    <span>Best Practices and Architectural Recommendations</span>
+                    <span class="arrow text-stone-600 transform transition-transform duration-300">▶</span>
+                </button>
+                <div class="collapsible-content mt-2 p-4 border border-stone-300 rounded-md bg-white">
+                    <h4 class="text-lg font-semibold text-stone-700 mt-2 mb-2">1. For Go Backends:</h4>
+                    <ul class="list-disc list-inside ml-4 space-y-1 mb-2">
+                        <li><strong>Protocol:</strong> gRPC for performance/type-safety; HTTP/REST (JSON) for simpler APIs; WebSockets for real-time.</li>
+                        <li><strong>Concurrency:</strong> Goroutines for requests, channels for safe data exchange.</li>
+                        <li><strong>Error Handling:</strong> Clear, consistent errors translatable by Rust.</li>
+                        <li><strong>Security:</strong> TLS for network, input validation, server timeouts (Slowloris).</li>
+                        <li><strong>Sidecar Design:</strong> Self-contained executable, graceful shutdown, dynamic port allocation via stdout.</li>
+                    </ul>
+                    <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">2. For Tauri Applications:</h4>
+                    <ul class="list-disc list-inside ml-4 space-y-1 mb-2">
+                        <li><strong>IPC:</strong> Commands (<code>invoke</code>) for most Rust-JS (type safety, Result). Events for decoupled notifications. Tauri channels for high-throughput streaming.</li>
+                        <li><strong>State Management:</strong> Tauri managed state (<code>app.manage()</code>, <code>tauri::State</code>) with <code>Mutex</code>/<code>RwLock</code> for mutable Rust state. JS sync via commands (JS->Rust) & events (Rust->JS).</li>
+                        <li><strong>Security:</strong> Strict CSP, granular capabilities/permissions (least privilege).</li>
+                        <li><strong>Native Integration:</strong> Use Tauri plugins/APIs, mind platform specifics.</li>
+                    </ul>
+                     <h4 class="text-lg font-semibold text-stone-700 mt-4 mb-2">3. For Go-Tauri Integration:</h4>
+                    <ul class="list-disc list-inside ml-4 space-y-1 mb-2">
+                        <li><strong>Rust as Intermediary:</strong> Good balance of security/control. Rust handles Go auth, sidecar lifecycle, data/error translation.</li>
+                        <li><strong>Sidecar vs. Separate Server:</strong> Sidecar for tightly coupled, bundled backends. Separate server for independent Go backends (needs port/network security).</li>
+                        <li><strong>Data Serialization:</strong> JSON for HTTP/WS simplicity. Protobuf for gRPC or efficient binary (stdio/TCP) with framing.</li>
+                        <li><strong>Error Propagation:</strong> Go errors -> Rust errors (serializable) -> JS Promise rejections. User-friendly UI messages, detailed logs.</li>
+                        <li><strong>Authentication:</strong> Implicit for stdio sidecar. Token-based for networked server (Rust mediates/generates tokens).</li>
+                    </ul>
+                </div>
+                 <p class="mt-6 text-sm text-stone-600">This interactive guide aims to provide a starting point. The full report contains much more detail on each topic, including specific code patterns, advanced considerations, and further research areas.</p>
+            </section>
+        </div>
+    </main>
+
+<script>
+    const goNetworkingTableData = [
+        { protocol: "TCP (Generic)", library: "<code>net</code>", characteristics: "Stdlib, fundamental stream-oriented connections. Requires manual framing for application messages.", useCases: "Custom binary protocols, foundational for other protocols.", security: "Input validation, proper error handling, TLS via <code>crypto/tls</code> for custom encryption." },
+        { protocol: "UDP (Generic)", library: "<code>net</code>", characteristics: "Stdlib, datagram-oriented, connectionless (can be \"connected\"). Requires application-level reliability if needed.", useCases: "Real-time data (gaming, streaming), DNS, VoIP.", security: "Input validation, DTLS for encryption, protection against amplification attacks." },
+        { protocol: "HTTP/1.1, HTTP/2", library: "<code>net/http</code>", characteristics: "Stdlib, robust, widely used. HTTP/2 support transparent with HTTPS. Connection pooling via <code>http.Transport</code>.", useCases: "Web services, REST APIs, general web communication.", security: "<code>http.Server</code> timeouts (Read, Write, Idle, ReadHeader) for DoS (Slowloris) protection. Secure <code>tls.Config</code>. Input validation. CSP for web frontends." },
+        { protocol: "WebSocket (Stdlib)", library: "<code>golang.org/x/net/websocket</code>", characteristics: "Stdlib (extended), considered low-level by some.", useCases: "Basic WebSocket needs if avoiding third-party libs.", security: "WSS for encryption. Origin checking. Input validation for messages." },
+        { protocol: "WebSocket (Community)", library: "<code>gorilla/websocket</code>", characteristics: "Third-party, community standard, feature-rich, robust. Requires read/write pump pattern for concurrency.", useCases: "Real-time web applications (chat, live updates, games).", security: "WSS for encryption. Origin checking (<code>Upgrader.CheckOrigin</code>). Input validation. Managing connection state securely." },
+        { protocol: "gRPC", library: "<code>google.golang.org/grpc</code> (with <code>protoc</code>)", characteristics: "Third-party (Google), high-performance RPC using Protocol Buffers and HTTP/2. Strong typing, code generation.", useCases: "Microservices communication, efficient client-server interaction, multi-language environments.", security: "TLS for transport security (grpc.Creds). Authentication mechanisms (token-based, mTLS). Input validation on service methods." }
+    ];
+
+    const tauriApisTableData = [
+        { module: "<code>core</code>", functions: "<code>invoke</code>, <code>convertFileSrc</code>", purpose: "Core IPC for calling Rust commands, converting file paths for webview asset protocol.", example: "Calling a Rust function; displaying a local image." },
+        { module: "<code>window</code>", functions: "<code>WebviewWindow</code>, <code>getCurrent()</code>, <code>getAll()</code>, <code>minimize()</code>, <code>maximize()</code>, <code>setTitle()</code>, etc.", purpose: "Manage application windows: creation, customization, control, and listen to window events.", example: "Creating a settings window; resizing main window." },
+        { module: "<code>webviewWindow</code> (v2)", functions: "<code>WebviewWindow</code>, <code>getCurrentWebviewWindow()</code>", purpose: "Interact with the current webview instance, listen to webview-specific events.", example: "Listening to an event for current webview." },
+        { module: "<code>event</code>", functions: "<code>listen()</code>, <code>once()</code>, <code>emit()</code>", purpose: "Send and receive events between JavaScript and Rust, or between windows.", example: "Notifying frontend of backend process completion." },
+        { module: "<code>tray</code> (plugin)", functions: "<code>TrayIcon.new()</code>, <code>TrayIconOptions</code>", purpose: "Create and manage system tray icons and their context menus.", example: "Quick actions for background app." },
+        { module: "<code>menu</code> (plugin)", functions: "<code>Menu.new()</code>, <code>MenuItem</code>, <code>Submenu</code>", purpose: "Create and manage native window and context menus.", example: "Building a standard application menu." },
+        { module: "<code>notification</code> (plugin)", functions: "<code>sendNotification()</code>, <code>requestPermission()</code>", purpose: "Display native OS notifications.", example: "Alerting user about completed download." },
+        { module: "<code>dialog</code> (plugin)", functions: "<code>open()</code>, <code>save()</code>, <code>message()</code>, <code>ask()</code>, <code>confirm()</code>", purpose: "Show native file/message dialogs.", example: "User selects file or confirms action." },
+        { module: "<code>globalShortcut</code> (plugin)", functions: "<code>register()</code>, <code>unregister()</code>", purpose: "Register and manage global keyboard shortcuts.", example: "Triggering app function when not focused." },
+        { module: "<code>fs</code> (plugin)", functions: "<code>readTextFile()</code>, <code>writeTextFile()</code>, <code>readDir()</code>", purpose: "Perform file system operations within a sandboxed scope.", example: "Reading config file; saving user data." },
+        { module: "<code>os</code> (plugin)", functions: "<code>arch()</code>, <code>platform()</code>, <code>type()</code>, <code>tempdir()</code>", purpose: "Get OS-specific information.", example: "Customizing behavior based on OS." },
+        { module: "<code>shell</code> (plugin)", functions: "<code>Command.execute()</code>, <code>Command.spawn()</code>, <code>open()</code>", purpose: "Execute external programs and open URLs/files.", example: "Running a script; opening a web link." },
+        { module: "<code>http</code> (plugin)", functions: "<code>fetch()</code>", purpose: "Make HTTP requests via Rust core (bypassing webview CORS).", example: "Securely fetching data from external API." },
+        { module: "<code>clipboard</code> (plugin)", functions: "<code>writeText()</code>, <code>readText()</code>", purpose: "Interact with system clipboard.", example: "Implementing copy/paste." }
+    ];
+
+    const ipcTableData = [
+        { mechanism: "Local HTTP/S Server (Go) <-> Rust HTTP Client", complexity: "Moderate (Go server, Rust client e.g., <code>reqwest</code>)", performance: "Overhead of HTTP, but widely understood. TLS adds overhead.", security: "If HTTPS, self-signed certs need trust on Rust client. Auth via tokens in headers. Localhost comms.", useCases: "RESTful APIs, general request/response." },
+        { mechanism: "Local WebSocket Server (Go) <-> Rust WS Client", complexity: "Moderate (Go server, Rust client e.g., <code>tungstenite</code>)", performance: "Low latency, persistent, good for real-time.", security: "If WSS, self-signed certs need trust. Auth via handshake/tokens. Localhost comms.", useCases: "Real-time bidirectional updates, streaming data." },
+        { mechanism: "Local gRPC Server (Go) <-> Rust gRPC Client", complexity: "Higher (Protobuf defs, code gen for both)", performance: "High performance, low latency, binary (Protobuf).", security: "TLS for transport. Auth via gRPC interceptors (tokens, mTLS). Localhost comms.", useCases: "High-performance RPC, microservices, type-safe contracts." },
+        { mechanism: "Go Sidecar <-> Rust Core (Stdio)", complexity: "Moderate to High (Go exe, Rust process mgmt & stdio parsing)", performance: "Potentially very fast (direct pipe), depends on stdio efficiency/protocol.", security: "Implicitly secure if stdio exclusive to parent. Complex data needs framing/serialization. No network exposure.", useCases: "Bundling self-contained Go tools/daemons. Good if Go process doesn't need external network access." },
+        { mechanism: "Go Sidecar (hosting HTTP/WS/gRPC on dynamic port) <-> Rust Core (network client)", complexity: "High (Sidecar mgmt + network client complexity)", performance: "Performance of chosen network protocol. Initial port discovery via stdio.", security: "Sidecar prints port to stdout. Rust connects to <code>localhost:dynamic_port</code>. Same security as direct local network calls. Risk of port info leakage if stdout not handled carefully.", useCases: "Complex Go backends needing network interface but bundled with app. Avoids fixed port conflicts." }
+    ];
+
+    function populateTable(tableBodyId, data) {
+        const tableBody = document.getElementById(tableBodyId);
+        if (!tableBody) return;
+        tableBody.innerHTML = ''; // Clear existing rows
+        data.forEach(rowData => {
+            const row = tableBody.insertRow();
+            Object.values(rowData).forEach(cellData => {
+                const cell = row.insertCell();
+                cell.innerHTML = cellData;
+                cell.className = 'px-6 py-4 whitespace-nowrap text-sm text-gray-700';
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const sections = document.querySelectorAll('.content-section');
+        const navLinks = document.querySelectorAll('#sidebar nav a');
+        const mobileMenuButton = document.getElementById('mobileMenuButton');
+        const sidebar = document.getElementById('sidebar');
+
+        function showSection(sectionId) {
+            sections.forEach(section => {
+                if (section.id === sectionId) {
+                    section.classList.add('active');
+                } else {
+                    section.classList.remove('active');
+                }
+            });
+            navLinks.forEach(link => {
+                if (link.dataset.section === sectionId) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+             // Close sidebar on section selection on mobile
+            if (window.innerWidth < 768) { // md breakpoint
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const sectionId = link.dataset.section;
+                showSection(sectionId);
+            });
+        });
+
+        // Collapsible sections
+        document.querySelectorAll('.collapsible-trigger').forEach(trigger => {
+            trigger.addEventListener('click', () => {
+                const content = trigger.nextElementSibling;
+                trigger.classList.toggle('open');
+                content.classList.toggle('open');
+                // Animate max-height for smooth transition
+                if (content.classList.contains('open')) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                } else {
+                    content.style.maxHeight = null;
+                }
+            });
+        });
+        
+        // Mobile menu toggle
+        mobileMenuButton.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // Populate tables
+        populateTable('goNetworkingTableBody', goNetworkingTableData);
+        populateTable('tauriApisTableBody', tauriApisTableData);
+        populateTable('ipcTableBody', ipcTableData);
+
+        // Show intro section by default
+        showSection('intro');
+    });
+</script>
+</body>
+</html>
