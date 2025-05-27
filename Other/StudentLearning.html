@@ -67,7 +67,8 @@
         }
         .nav-link.active {
             background-color: #0ea5e9; /* sky-500 */
-            color: white;
+            color: white !important; /* Ensure text color changes for active mobile buttons too */
+            font-weight: 600;
         }
         /* Custom scrollbar for a cleaner look */
         ::-webkit-scrollbar {
@@ -110,19 +111,19 @@
             visibility: visible;
             opacity: 1;
         }
+        /* Ensure mobile nav buttons scrollbar is less obtrusive if it appears */
+        #mobile-nav-buttons::-webkit-scrollbar {
+            height: 4px;
+        }
+        #mobile-nav-buttons::-webkit-scrollbar-thumb {
+            background: #94a3b8; /* slate-400 */
+        }
     </style>
 </head>
 <body class="bg-stone-100 text-stone-800 flex flex-col md:flex-row min-h-screen">
 
-    <nav id="sidebar" class="bg-stone-200 w-full md:w-64 p-4 space-y-2 fixed md:sticky top-0 h-16 md:h-screen overflow-y-auto shadow-lg z-20 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
-        <div class="flex justify-between items-center md:block">
-            <h1 class="text-xl font-bold text-sky-700">Learning Guide</h1>
-            <button id="menu-toggle-close" class="md:hidden text-stone-700 hover:text-sky-600">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
+    <nav id="sidebar" class="hidden md:block bg-stone-200 w-full md:w-64 p-4 space-y-2 md:sticky top-0 md:h-screen overflow-y-auto shadow-lg z-10">
+        <h1 class="text-xl font-bold text-sky-700 mb-4">Learning Guide</h1>
         <a href="#introduction" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Introduction</a>
         <a href="#foundational-principles" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Foundational Principles</a>
         <a href="#integrating-principles" class="nav-link block p-2 rounded hover:bg-sky-200 hover:text-sky-700 transition-colors duration-200">Integrating Principles</a>
@@ -134,12 +135,9 @@
     </nav>
 
     <main class="flex-1 p-4 md:p-8 pt-20 md:pt-8 overflow-y-auto">
-        <button id="menu-toggle-open" class="md:hidden fixed top-4 left-4 z-30 bg-stone-200 p-2 rounded shadow text-stone-700 hover:text-sky-600">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-        </button>
-
+        <div id="mobile-nav-buttons" class="md:hidden fixed top-0 left-0 right-0 bg-stone-200 p-2 shadow-md z-20 h-16 flex items-center overflow-x-auto space-x-2 whitespace-nowrap">
+            </div>
+        
         <section id="introduction" class="content-section active mb-12">
             <h2 class="text-3xl font-bold text-sky-700 mb-6">The Ultimate Student's Guide to Mastering Learning</h2>
             <p class="mb-4 text-lg leading-relaxed">Welcome to your interactive guide to mastering learning! The modern academic landscape demands more than just hard work; it requires smart, effective strategies. This application translates the comprehensive "Ultimate Student's Guide" into an engaging experience, helping you understand and apply scientifically-backed techniques for GCSE, A-Level, and University success.</p>
@@ -1082,68 +1080,68 @@
     </main>
 
     <script>
-        // Sidebar toggle functionality
-        const sidebar = document.getElementById('sidebar');
-        const menuToggleOpen = document.getElementById('menu-toggle-open');
-        const menuToggleClose = document.getElementById('menu-toggle-close');
-        const mainContent = document.querySelector('main');
+        function initializeNavigation() {
+            const desktopSidebarLinks = document.querySelectorAll('#sidebar .nav-link');
+            const mobileNavContainer = document.getElementById('mobile-nav-buttons');
+            
+            // Dynamically create mobile navigation buttons
+            if (mobileNavContainer && desktopSidebarLinks.length > 0) {
+                mobileNavContainer.innerHTML = ''; // Clear any existing buttons
+                desktopSidebarLinks.forEach(link => {
+                    const button = document.createElement('a');
+                    button.href = link.getAttribute('href');
+                    button.textContent = link.textContent;
+                    // Add classes for styling and to be picked up by the nav logic
+                    button.className = 'nav-link mobile-nav-button py-2 px-4 rounded bg-sky-100 text-sky-700 hover:bg-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm shrink-0 transition-colors duration-200';
+                    mobileNavContainer.appendChild(button);
+                });
+            }
 
-        if (menuToggleOpen && menuToggleClose && sidebar) {
-            menuToggleOpen.addEventListener('click', () => {
-                sidebar.classList.remove('-translate-x-full');
-                sidebar.classList.add('translate-x-0');
-            });
-            menuToggleClose.addEventListener('click', () => {
-                sidebar.classList.remove('translate-x-0');
-                sidebar.classList.add('-translate-x-full');
-            });
-             // Close sidebar when a nav link is clicked on mobile
-            document.querySelectorAll('#sidebar .nav-link').forEach(link => {
-                link.addEventListener('click', () => {
-                    if (window.innerWidth < 768) { // md breakpoint
-                        sidebar.classList.remove('translate-x-0');
-                        sidebar.classList.add('-translate-x-full');
+            // Attach event listeners to ALL nav links (desktop and mobile)
+            document.querySelectorAll('.nav-link').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+
+                    if (targetElement) {
+                        // Remove active class from all nav links (both desktop and mobile)
+                        document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+                        
+                        // Add active class to the clicked nav link
+                        this.classList.add('active');
+                        
+                        // Also add active class to its counterpart in the other nav menu
+                        const counterpartHref = this.getAttribute('href');
+                        document.querySelectorAll(`.nav-link[href="${counterpartHref}"]`).forEach(counterpart => counterpart.classList.add('active'));
+
+
+                        document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+                        targetElement.classList.add('active');
+                        
+                        const offset = window.innerWidth < 768 ? 70 : 20; 
+                        const bodyRect = document.body.getBoundingClientRect().top;
+                        const elementRect = targetElement.getBoundingClientRect().top;
+                        const elementPosition = elementRect - bodyRect;
+                        const offsetPosition = elementPosition - offset;
+
+                        window.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+
+                        // Scroll active mobile button into view if it's on mobile
+                        if (window.innerWidth < 768 && this.classList.contains('mobile-nav-button')) {
+                            this.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }
                     }
                 });
             });
         }
 
-        // Smooth scrolling and section highlighting
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                const targetElement = document.querySelector(targetId);
-
-                if (targetElement) {
-                    // Remove active class from all nav links and sections
-                    document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-                    document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
-                    
-                    // Add active class to the clicked nav link and target section
-                    this.classList.add('active');
-                    targetElement.classList.add('active');
-                    
-                    // Scroll to target element
-                    // Adding a slight offset for fixed header on mobile
-                    const offset = window.innerWidth < 768 ? 70 : 20; // 70px for mobile, 20px for desktop
-                    const bodyRect = document.body.getBoundingClientRect().top;
-                    const elementRect = targetElement.getBoundingClientRect().top;
-                    const elementPosition = elementRect - bodyRect;
-                    const offsetPosition = elementPosition - offset;
-
-                    window.scrollTo({
-                        top: offsetPosition,
-                        behavior: 'smooth'
-                    });
-                }
-            });
-        });
-
-        // Set initial active section based on URL hash or default to introduction
         function setInitialSection() {
             const hash = window.location.hash;
-            let activeSectionId = 'introduction'; // Default
+            let activeSectionId = 'introduction'; 
             if (hash) {
                 const potentialSection = document.querySelector(hash);
                 if (potentialSection && potentialSection.classList.contains('content-section')) {
@@ -1154,37 +1152,43 @@
             document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
             document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
 
-            const activeNavLink = document.querySelector(`.nav-link[href="#${activeSectionId}"]`);
+            const activeNavLinks = document.querySelectorAll(`.nav-link[href="#${activeSectionId}"]`);
+            activeNavLinks.forEach(link => link.classList.add('active'));
+            
             const activeContentSection = document.getElementById(activeSectionId);
-
-            if (activeNavLink) activeNavLink.classList.add('active');
             if (activeContentSection) activeContentSection.classList.add('active');
+
+            // Scroll active mobile button into view on load
+            if (window.innerWidth < 768) {
+                const activeMobileButton = document.querySelector(`#mobile-nav-buttons .nav-link[href="#${activeSectionId}"]`);
+                if (activeMobileButton) {
+                    activeMobileButton.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+                }
+            }
         }
         
-        window.addEventListener('load', setInitialSection);
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeNavigation();
+            setInitialSection();
+        });
+        window.addEventListener('hashchange', setInitialSection);
 
 
         // Tab functionality
         document.querySelectorAll('.tabs').forEach(tabGroup => {
             const tabButtons = tabGroup.querySelectorAll('.tab-button');
-            const tabContents = tabGroup.nextElementSibling.querySelectorAll('.tab-content'); // Assumes content div is immediately after tabs div
-
-            // More robustly find the parent of tab-content elements if structure varies
             let contentContainer = tabGroup.parentElement.querySelector('.tab-content')?.parentElement;
-            if (!contentContainer) { // Fallback if structure is slightly different
+            if (!contentContainer) { 
                  contentContainer = tabGroup.nextElementSibling;
             }
             
             if(contentContainer){
                 const allContentsInGroup = contentContainer.querySelectorAll('.tab-content');
-
                 tabButtons.forEach(button => {
                     button.addEventListener('click', () => {
                         tabButtons.forEach(btn => btn.classList.remove('active'));
                         button.classList.add('active');
-                        
                         const targetId = button.dataset.target;
-                        
                         allContentsInGroup.forEach(content => {
                             if (content.id === targetId) {
                                 content.classList.remove('hidden');
@@ -1204,19 +1208,6 @@
             button.addEventListener('click', () => {
                 const content = button.nextElementSibling;
                 const isOpening = content.style.maxHeight === '0px' || !content.style.maxHeight;
-                
-                // Close all other accordions in the same parent group if needed (optional)
-                // Example: if you want only one accordion open at a time within a .space-y-8 parent
-                // const parentGroup = button.closest('.space-y-8'); // Adjust selector if needed
-                // if (parentGroup) {
-                //     parentGroup.querySelectorAll('.accordion-content').forEach(acc => {
-                //         if (acc !== content) {
-                //             acc.style.maxHeight = '0px';
-                //             acc.previousElementSibling.textContent = acc.previousElementSibling.textContent.replace(' -', ' +');
-                //         }
-                //     });
-                // }
-
                 if (isOpening) {
                     content.style.maxHeight = content.scrollHeight + "px";
                     button.textContent = button.textContent.replace('+', '-');
@@ -1228,13 +1219,13 @@
         });
 
         // Chart.js implementations
-        // Function to wrap text in Chart.js tooltips and labels
         function wrapText(str, maxWidth) {
             const newLineStr = "\n";
             let res = '';
+            if (!str) return ''; // handle null or undefined str
+            str = String(str); // Ensure str is a string
             while (str.length > maxWidth) {
                 let found = false;
-                // Inserts new line at first whitespace of the line
                 for (let i = maxWidth - 1; i >= 0; i--) {
                     if (str.charAt(i).match(/^\s$/)) {
                         res = res + [str.slice(0, i), newLineStr].join('');
@@ -1243,7 +1234,6 @@
                         break;
                     }
                 }
-                // Inserts new line at maxWidth position, the word is too long
                 if (!found) {
                     res += [str.slice(0, maxWidth), newLineStr].join('');
                     str = str.slice(maxWidth);
@@ -1252,7 +1242,6 @@
             return res + str;
         }
 
-        // 1. Foundational Principles Chart
         const fpCtx = document.getElementById('foundationalPrinciplesChart');
         if (fpCtx) {
             new Chart(fpCtx, {
@@ -1261,14 +1250,14 @@
                     labels: ['Active Recall', 'Spaced Repetition', 'Interleaving', 'Elaborative Interrogation'],
                     datasets: [{
                         label: 'Impact on Long-Term Retention',
-                        data: [90, 95, 75, 80], // Illustrative data
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)', // blue-500
+                        data: [90, 95, 75, 80], 
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)', 
                         borderColor: 'rgba(59, 130, 246, 1)',
                         borderWidth: 1
                     }, {
                         label: 'Impact on Depth of Understanding',
-                        data: [85, 70, 80, 90], // Illustrative data
-                        backgroundColor: 'rgba(245, 158, 11, 0.7)', // amber-500
+                        data: [85, 70, 80, 90], 
+                        backgroundColor: 'rgba(245, 158, 11, 0.7)', 
                         borderColor: 'rgba(245, 158, 11, 1)',
                         borderWidth: 1
                     }]
@@ -1277,35 +1266,22 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            title: { display: true, text: 'Relative Impact (%)' }
-                        },
-                        x: {
-                             ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}
-                        }
+                        y: { beginAtZero: true, max: 100, title: { display: true, text: 'Relative Impact (%)' }},
+                        x: { ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}}
                     },
                     plugins: {
                         legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) { label += ': '; }
-                                    if (context.parsed.y !== null) {
-                                        label += context.parsed.y + '% (Illustrative)';
-                                    }
-                                    return wrapText(label, 20);
-                                }
-                            }
-                        }
+                        tooltip: { callbacks: { label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) { label += ': '; }
+                            if (context.parsed.y !== null) { label += context.parsed.y + '% (Illustrative)';}
+                            return wrapText(label, 20);
+                        }}}
                     }
                 }
             });
         }
 
-        // 2. SRL Components Chart
         const srlCtx = document.getElementById('srlComponentsChart');
         if (srlCtx) {
             new Chart(srlCtx, {
@@ -1314,43 +1290,24 @@
                     labels: ['Cognitive Strategies', 'Metacognitive Awareness', 'Motivational Beliefs'],
                     datasets: [{
                         label: 'Components of Self-Regulated Learning',
-                        data: [35, 35, 30], // Illustrative percentages
-                        backgroundColor: [
-                            'rgba(59, 130, 246, 0.7)', // blue-500
-                            'rgba(16, 185, 129, 0.7)', // emerald-500
-                            'rgba(245, 158, 11, 0.7)'  // amber-500
-                        ],
-                        borderColor: [
-                            'rgba(59, 130, 246, 1)',
-                            'rgba(16, 185, 129, 1)',
-                            'rgba(245, 158, 11, 1)'
-                        ],
+                        data: [35, 35, 30], 
+                        backgroundColor: ['rgba(59, 130, 246, 0.7)','rgba(16, 185, 129, 0.7)','rgba(245, 158, 11, 0.7)'],
+                        borderColor: ['rgba(59, 130, 246, 1)','rgba(16, 185, 129, 1)','rgba(245, 158, 11, 1)'],
                         borderWidth: 1
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                             callbacks: {
-                                label: function(context) {
-                                    let label = context.label || '';
-                                    if (label) { label += ': '; }
-                                    if (context.parsed !== null) {
-                                        label += context.parsed + '%';
-                                    }
-                                    return wrapText(label, 20);
-                                }
-                            }
-                        }
-                    }
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(context) {
+                        let label = context.label || '';
+                        if (label) { label += ': '; }
+                        if (context.parsed !== null) { label += context.parsed + '%';}
+                        return wrapText(label, 20);
+                    }}}}
                 }
             });
         }
 
-        // 3. Sleep Chart
         const sleepCtx = document.getElementById('sleepChart');
         if (sleepCtx) {
             new Chart(sleepCtx, {
@@ -1358,57 +1315,32 @@
                 data: {
                     labels: ['Teens (GCSE/A-Level)', 'Younger Children', 'Adults (University)'],
                     datasets: [{
-                        label: 'Min Recommended Sleep (hours)',
-                        data: [8, 9, 7],
-                        backgroundColor: 'rgba(16, 185, 129, 0.5)', // emerald-500
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 1,
-                        stack: 'Stack 0',
+                        label: 'Min Recommended Sleep (hours)', data: [8, 9, 7],
+                        backgroundColor: 'rgba(16, 185, 129, 0.5)', borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1, stack: 'Stack 0',
                     }, {
-                        label: 'Max Recommended Sleep (hours) - up to',
-                        data: [2, 2, 2], // Represents the range (e.g., 8-10 means 8 + 2)
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)', // emerald-500 darker
-                        borderColor: 'rgba(16, 185, 129, 1)',
-                        borderWidth: 1,
-                        stack: 'Stack 0',
+                        label: 'Max Recommended Sleep (hours) - up to', data: [2, 2, 2], 
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)', borderColor: 'rgba(16, 185, 129, 1)',
+                        borderWidth: 1, stack: 'Stack 0',
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 12,
-                            title: { display: true, text: 'Hours of Sleep' },
-                            stacked: true,
-                        },
-                        x: {
-                            stacked: true,
-                            ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}
-                        }
+                        y: { beginAtZero: true, max: 12, title: { display: true, text: 'Hours of Sleep' }, stacked: true,},
+                        x: { stacked: true, ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 10);}}}
                     },
-                    plugins: {
-                        legend: { display: false }, // Simpler display for stacked bar
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.dataset.label || '';
-                                    const val = context.parsed.y;
-                                    if (context.datasetIndex === 0) {
-                                        const totalMax = context.chart.data.datasets[0].data[context.dataIndex] + context.chart.data.datasets[1].data[context.dataIndex];
-                                        return wrapText(`${context.chart.data.labels[context.dataIndex]}: ${val}-${totalMax} hours`, 25);
-                                    }
-                                    return null; // Hide tooltip for the second dataset part
-                                }
-                            }
-                        }
-                    }
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) {
+                        const val = context.parsed.y;
+                        if (context.datasetIndex === 0) {
+                            const totalMax = context.chart.data.datasets[0].data[context.dataIndex] + context.chart.data.datasets[1].data[context.dataIndex];
+                            return wrapText(`${context.chart.data.labels[context.dataIndex]}: ${val}-${totalMax} hours`, 25);
+                        } return null;
+                    }}}}
                 }
             });
         }
 
-        // 4. Physical Activity Chart
         const activityCtx = document.getElementById('activityChart');
         if (activityCtx) {
             new Chart(activityCtx, {
@@ -1416,55 +1348,28 @@
                 data: {
                     labels: ['Children/Adolescents (6-17 yrs)', 'Adults (18-65 yrs, University)'],
                     datasets: [{
-                        label: 'Moderate Activity (mins/week)',
-                        data: [0, 150], // Adolescents: 60 mins/day = 420 total, but guidelines are more complex. Adults: 150 mins.
-                                        // For simplicity, showing adult guideline and emphasizing daily for adolescents.
-                        backgroundColor: 'rgba(239, 68, 68, 0.7)', // red-500
-                        borderColor: 'rgba(239, 68, 68, 1)',
-                        borderWidth: 1
+                        label: 'Moderate Activity (mins/week)', data: [0, 150], 
+                        backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1
                     }, {
-                        label: 'Vigorous Activity (mins/week)',
-                        data: [0, 75], // Adults: 75 mins.
-                        backgroundColor: 'rgba(217, 119, 6, 0.7)', // orange-500
-                        borderColor: 'rgba(217, 119, 6, 1)',
-                        borderWidth: 1
+                        label: 'Vigorous Activity (mins/week)', data: [0, 75], 
+                        backgroundColor: 'rgba(217, 119, 6, 0.7)', borderColor: 'rgba(217, 119, 6, 1)', borderWidth: 1
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'Recommended Minutes per Week' }
-                        },
-                        x: {
-                             ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 15);}}
-                        }
+                        y: { beginAtZero: true, title: { display: true, text: 'Recommended Minutes per Week' }},
+                        x: { ticks: { callback: function(value) { return wrapText(this.getLabelForValue(value), 15);}}}
                     },
-                    plugins: {
-                        legend: { position: 'top' },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) { label += ': '; }
-                                    label += context.parsed.y + ' mins/week';
-                                    if (context.label.includes('Children')) {
-                                        label = wrapText('Children/Adolescents: At least 60 mins moderate-to-vigorous activity DAILY (including vigorous & muscle/bone strengthening 3x/week). Chart shows adult weekly for comparison.', 30);
-                                    } else {
-                                       label = wrapText(label, 25);
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        subtitle: {
-                            display: true,
-                            text: 'Note: Children/Adolescents need 60 mins daily activity.',
-                            padding: { top: 10 }
-                        }
-                    }
+                    plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) { label += ': '; }
+                        label += context.parsed.y + ' mins/week';
+                        if (context.label.includes('Children')) {
+                            label = wrapText('Children/Adolescents: At least 60 mins moderate-to-vigorous activity DAILY (including vigorous & muscle/bone strengthening 3x/week). Chart shows adult weekly for comparison.', 30);
+                        } else { label = wrapText(label, 25); }
+                        return label;
+                    }}}, subtitle: { display: true, text: 'Note: Children/Adolescents need 60 mins daily activity.', padding: { top: 10 }}}
                 }
             });
         }
